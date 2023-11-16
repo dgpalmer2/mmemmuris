@@ -1,0 +1,563 @@
+---
+title: "mmemmuris: Marginal and Mixed-Effects Models for Multivariate and Univariate Results Including Sphericity"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 6
+vignette: >
+  %\VignetteIndexEntry{mmemmuris: Marginal and Mixed-Effects Models for Multivariate and Univariate Results Including Sphericity}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r, message = FALSE}
+library(mmemmuris)
+```
+
+## Example 1 - Dogs Data: Choosing the Tests
+
+Multivariate analysis of variance (MANOVA)/repeated measures analysis of variance (RM ANOVA) will work with the data in the multivariate (wide) format while marginal models and mixed-effects models will work with the data in the univariate (long) format.
+
+### Wide format
+
+```{r, message = FALSE}
+dogsWide
+```
+
+### Long format
+
+```{r, message = FALSE}
+dogsLong
+```
+
+We can see with the long format data that we now have a `logHistamine` variable and a univariate `Minutes` variable.
+
+### Possible Workflow for This Data
+
+Let's say your boss requests you perform a RM ANOVA or MANOVA for this data.  There is no room for negotiation for an alternative approach as this is the industry standard for this field.  You get no other guidance from him.
+
+#### Check if the univariate model is reversible
+
+The direct univariate analogue to RM ANOVA and MANOVA is the marginal model.  This can be fit with the `gls` function in the `nlme` package:  
+
+- `model = logHistamine ~ Group * Minutes`: This fits main effects of `Group`, `Minutes`, and the interaction of `Group` and `Minutes` (`Group:Minutes`)  
+- `correlation = corSymm(form = ~ as.numeric(Minutes) | Dog)`: This gives a separate marginal variance-covariance matrix for each dog as well as separate covariance parameters for the minutes within each dog matrix.  
+- `weights = varIdent(form = ~ 1 | Minutes)`: This gives separate variance parameters for the minutes within each dog matrix.  
+- `na.action = na.omit`: This omits any rows in the dataset with missing values.
+
+```{r}
+dogsLong$Group <- factor(paste(dogsLong$Drug, dogsLong$Depleted))
+glsMod <- gls(logHistamine ~ Group * Minutes,
+              correlation = corSymm(form = ~ as.numeric(Minutes) | Dog),
+              weights = varIdent(form = ~ 1 | Minutes),
+              na.action = na.omit,
+              data = dogsLong)
+```
+
+An equivalent linear mixed-effects model can be fit with the `lme` function in the `nlme` package:  
+
+- `fixed = logHistamine ~ Group * Minutes`: This fits main effects of `Group`, `Minutes`, and the interaction of `Group` and `Minutes` (`Group:Minutes`)  
+- `random = ~ Minutes | Dog`: This gives a separate marginal variance-covariance matrix for each dog as well as separate (co)variance parameters for the minutes within each dog matrix.  
+- `na.action = na.omit`: This omits any rows in the dataset with missing values.
+
+```{r}
+lmeMod <- lme(logHistamine ~ Group * Minutes,
+              random = ~ Minutes | Dog,
+              na.action = na.omit,
+              data = dogsLong)
+```
+
+This yields unstructured marginal variance-covariance matrices.  We will check to see if this model is reversible so that your results with the marginal model will match RM ANOVA or MANOVA.
+
+```{r}
+isReversible(glsMod)
+```
+
+The boss will not be happy with this when it is checked with his software!  So, what needs to be done to make this model reversible?
+
+To start with, we need to have complete data.
+
+```{r}
+dogsLong[is.na(dogsLong$logHistamine), ]
+```
+
+Dog 6 has a missing value for `logHistamine5`.  We will drop this case.
+
+```{r}
+dogsLongCC <- dogsLong[dogsLong$Dog != 6, ]
+```
+
+Next, all between-subject terms must be interacted with the within-subject terms.
+
+```{r}
+termsType(glsMod)[c("between", "within")]
+```
+
+Our only within-subject main effect is the repeated measurements factor.  All the terms in the multivariate model are also included in this univariate model, so this condition is satisfied.
+
+Next, the **V** matrix needs to be the same for each subject, and it needs to be unstructured.
+
+We refit the model with maximum likelihood instead of restricted maximum likelihood since minimizing the error sum of squares is equivalent to maximizing the (log-)likelihood with respect to the fixed-effects coefficients.
+
+Dog #1
+
+```{r}
+Vmatrix(REMLtoML(glsMod))$V
+```
+
+Dog #6
+
+```{r}
+Vmatrix(REMLtoML(glsMod), individual = 6)$V
+```
+
+Covariance structure
+
+```{r}
+covStruct(REMLtoML(glsMod))
+```
+
+This condition will be satisfied when Dog 6 is removed from the dataset.
+
+```{r}
+dogsLongCC$Group <- factor(paste(dogsLongCC$Drug, dogsLongCC$Depleted))
+glsModCC <- gls(logHistamine ~ Group * Minutes,
+                correlation = corSymm(form = ~ as.numeric(Minutes) | Dog),
+                weights = varIdent(form = ~ 1 | Minutes),
+                na.action = na.omit,
+                data = dogsLongCC)
+isReversible(glsModCC)
+```
+
+Just what the boss ordered!
+
+#### Choose the covariance structure
+
+##### Likelihood Ratio Test Approach
+
+Now you may be wondering what set of tests to be using for this: the univariate (classical RM ANOVA) or multivariate (MANOVA) tests.  You can't read the guy's mind!  In an ideal world, this would've been specified a priori through a power analysis.  Let's say you have no idea.  Have no fear!  We can do a likelihood ratio test to see which covariance structure would be a better fit for our data:
+
+\begin{align}
+  &H_0: \text{The compound symmetry covariance structure is the better fit.}\\
+  &H_a: \text{The unstructured covariance structure is the better fit.}
+\end{align}
+
+```{r}
+nestedCovariance(glsModCC)
+```
+
+This significant ($\alpha = 0.05$) p-value would give you the go-ahead to use the multivariate tests.  AIC and BIC are also in agreement with using the multivariate tests since smaller is better.
+
+Here is the equivalent result with the multivariate linear model (MLM).  Check the documentation for the explanation behind how to do this for the MLM if you are interested.
+
+```{r}
+dogsWide$Group <- factor(paste(dogsWide$Drug, dogsWide$Depleted))
+manovaMod <- manova(cbind(logHistamine0, logHistamine1, logHistamine3,
+                          logHistamine5) ~ Group, data = na.omit(dogsWide))
+nestedCovariance(manovaMod)
+```
+
+##### Sphericity Tests Approach
+
+An alternative approach we can try to determine what tests to use is Mauchly's test for sphericity.  If we have a significant p-value, we can choose either the multivariate tests for the within-subject effects or apply an epsilon correction to the univariate tests for a departure from sphericity.  Below we test whether the variances of all possible pairwise differences (${D_i}$) of the within-subject factors by case are equal or not:
+
+\begin{align}
+  &H_0: \sigma ^ 2 _ {D_1} = \cdots = \sigma ^ 2 _ {D_r}\\
+  &H_a: \text{At least one } \sigma ^ 2 _ {D_i} \text{ is not equal to the others}
+\end{align}
+
+```{r}
+sphericityTests(Ematrix(glsModCC))
+```
+
+Based on this result, we arrive at the same tests to use as the likelihood ratio test suggested if we chose to address sphericity.  Perhaps a better approach would be to ignore the sphericity test and examine the **V** matrix of the unstructured covariance model to see if we can see if we can assume sphericity or not.  Forgoing the hypothesis test is more subjective, though.
+
+Here is the equivalent result with the MLM.
+
+```{r}
+sphericityTests(Ematrix(manovaMod))
+```
+
+#### Running the tests of choice
+
+The multivariate tests test whether mean vectors of your groups ($\boldsymbol{g}$) are equal or not.
+
+\begin{align}
+  &H_0: \boldsymbol{\mu_1} = \dots = \boldsymbol{\mu_g}\\
+  &H_a: \text{At least one } \boldsymbol{\mu_i} \text{ is not equal to the others}
+\end{align}
+
+Since we have a grouping factor (`Group`), we will have a `Group:Time` interaction term in the model. The hypotheses are slightly different since the effect of `Time` on `logHistamine` is assumed to differ for different groups.
+
+**_Wilks' Lambda_** ($\Lambda$)
+
+Wilks' lambda essentially represents the ratio of the error to total.  Consequentially, we reject the null hypothesis for small values of Wilks' lambda.
+
+**Rao's $F$ approximation**
+
+```{r}
+wilksLambda(glsModCC)
+```
+
+The "appropriate" denominator degrees of freedom for marginal and linear mixed-effects models are not universally agreed on (prompting the change in the `lme4` package from `nlme`), so options for the likelihood ratio statistic and its Bartlett-corrected alternative are also included in this package.  The Bartlett correction for the likelihood ratio statistic is supposed to be more accurate for smaller samples.
+
+**_Likelihood Ratio $\chi ^ 2$ Approximation_**
+
+```{r}
+wilksLambda(glsModCC, approx = "LR")
+```
+
+Obtaining the likelihood ratio test for the interaction term is easy enough by fitting a reduced model with only main effects...
+
+```{r}
+mainEffects <- update(glsModCC, model = logHistamine ~ Group + Minutes)
+anova(REMLtoML(mainEffects), REMLtoML(glsModCC))
+```
+
+...or by using the `drop1` function.
+
+```{r}
+drop1(REMLtoML(glsModCC), test = "C")
+```
+
+See the `LRT` function (`?LRT`) for information on using contrast coefficient matrices to get the other terms.
+
+**_Bartlett-Corrected Likelihood Ratio $\chi ^ 2$ Approximation_**
+
+```{r}
+wilksLambda(glsModCC, approx = "B")
+```
+
+**_Pillai's Trace_** ($V$)
+
+Pillai's trace essentially represents the ratio of the hypothesis (explained variance) to total.  Consequentially, we reject the null hypothesis for large values of Pillai's trace.
+
+**Muller's $F$ approximation**
+
+```{r}
+pillaiTrace(glsModCC)
+```
+
+Note that terms where $s = 1$ are kept as $V + \Lambda = 1$ when $s = 1$.  If the model is reversible, we can disable the likelihood ratio test approach and use the **H** and **E** matrices approach to get these additional terms by setting `LR = FALSE` as is done below.
+
+```{r}
+pillaiTrace(glsModCC, LR = FALSE)
+```
+
+**Pillai's $F$ approximation**
+
+This is Pillai's original F approximation for the Pillai's trace statistic.  The Muller F approximation is said to be more accurate than Pillai's approximation.
+
+```{r}
+pillaiTrace(glsModCC, LR = FALSE, approx = "P")
+```
+
+**_Hotelling-Lawley Trace_** ($U$)
+
+Hotelling-Lawley's trace essentially represents the ratio of the hypothesis (explained variance) to error (unexplained variance).  Consequentially, we reject the null hypothesis for large values of Hotelling-Lawley's trace.
+
+**McKeon's $F$ approximation**
+
+```{r}
+hlTrace(glsModCC)
+```
+
+**Pillai-Samson's $F$ approximation**
+
+This is the original F approximation for the Hotelling-Lawley trace statistic.  The McKeon F approximation is said to be more accurate than Pillai-Samson's approximation.
+
+```{r}
+hlTrace(glsModCC, approx = "P")
+```
+
+The "appropriate" denominator degrees of freedom for marginal and linear mixed-effects models are not universally agreed on (prompting the change in the `lme4` package from `nlme`), so an option for the Wald statistic is also included in this package.  Note that the Wald statistic is less accurate than the likelihood ratio statistic for smaller samples.
+
+**_Wald $\chi ^ 2$ Approximation_**
+
+```{r}
+hlTrace(glsModCC, approx = "W")
+```
+
+Obtaining the Wald $\chi^2$-statistics for the within-subject effects is easy enough by multiplying the Wald-type $F$-tests by their corresponding numerator degrees of freedom.
+
+```{r}
+Ftests <- anova(glsModCC)[c("Minutes", "Group:Minutes"), ]
+Ftests$Chisq <- Ftests$numDF * Ftests$`F-value`
+Ftests$`Pr(>Chisq)` <- 1 - pchisq(Ftests$Chisq, Ftests$numDF)
+Ftests
+```
+
+See the `waldF` function (`?waldF`) for information on using contrast coefficient matrices to get the other terms.
+
+**_Roy's Greatest Root_** ($\Theta$)
+
+Roy's greatest root essentially represents the ratio of the hypothesis (explained variance) to error (unexplained variance) except, as the name implies, it only takes the largest characteristic root into account (unlike Hotelling-Lawley's trace).  Consequentially, we reject the null hypothesis for large values of Roy's greatest root.
+
+**Pillai's $F$ approximation**
+
+```{r}
+royGR(glsModCC)
+```
+
+Note that terms where $s = 1$ are kept as $U = \Theta$ when $s = 1$.  If the model is reversible, we can disable the Wald-type $F$-test approach and use the **H** and **E** matrices approach to get these additional terms by setting `waldF = FALSE` as is done below.
+
+```{r}
+royGR(glsModCC, waldF = FALSE)
+```
+
+Note that the $F$-statistics for `Group` and `Group:Minutes` are upper bounds.  This means that the p-values are lower bounds.  When p-values for Roy's greatest root are significant and Wilks' lambda, Pillai's trace, or Hotelling-Lawley's trace are not also significant, don't report Roy's greatest root results.
+
+Here's the boss' way for MANOVA:
+
+**_Wilks' Lambda_**
+
+**Rao's $F$ approximation**
+
+```{r}
+wilksLambda(manovaMod)
+```
+
+**_Pillai's Trace_**
+
+**Muller's $F$ approximation**
+
+```{r}
+pillaiTrace(manovaMod)
+```
+
+**_Hotelling-Lawley Trace_**
+
+**McKeon's $F$ approximation**
+
+```{r}
+hlTrace(manovaMod)
+```
+
+**_Roy's Greatest Root_**
+
+**Pillai's $F$ approximation**
+
+```{r}
+royGR(manovaMod)
+```
+
+All of the approximations used for marginal and linear mixed-effects models can be used for MLMs as well. 
+
+Now let's assume there is no industry standard or reviewers that perpetuate the cycle of using RM ANOVA.  We'll include all available data.
+
+**_Wilks' Lambda_**
+
+**Rao's $F$ approximation**
+
+```{r}
+wilksLambda(glsMod)
+```
+
+**_Pillai's Trace_**
+
+**Muller's $F$ approximation**
+
+```{r}
+pillaiTrace(glsMod)
+```
+
+**_Hotelling-Lawley Trace_**
+
+**McKeon's $F$ approximation**
+
+```{r}
+hlTrace(glsMod)
+```
+
+**_Roy's Greatest Root_**
+
+**Pillai's $F$ approximation**
+
+```{r}
+royGR(glsMod)
+```
+
+### An Alternative Workflow for This Data
+
+Let's say your boss requests you perform a repeated measures (RM) ANOVA for this data.  There is no room for negotiation for an alternative approach as this is the industry standard for this field.  You have reason to believe that the dogs could have the same variances and also the same covariances.  You decide if this assumption is not met, the Greenhouse-Geisser epsilon can be used to adjust the degrees of freedom.
+
+#### Check if the univariate model is reversible
+
+The direct univariate analogue to the RM ANOVA is the marginal model.  The correlation of errors needs to be unstructured to work with `mmemmuris`.
+
+```{r}
+glsMod <- gls(logHistamine ~ Drug * Depleted * Minutes,
+              correlation = corSymm(form = ~ as.numeric(Minutes) | Dog),
+              weights = varIdent(form = ~ 1 | Minutes),
+              na.action = na.omit,
+              data = dogsLong)
+```
+
+We will check to see if this model is reversible so that your results with the marginal model will match RM ANOVA.
+
+```{r}
+isReversible(glsMod)
+```
+
+The boss will not be happy with this when it is checked with his software!  Dog 6 has a missing value for `logHistamine5`.  We will drop this case.
+
+```{r}
+dogsLongCC <- dogsLong[dogsLong$Dog != 6, ]
+glsModCC <- gls(logHistamine ~ Drug * Depleted * Minutes,
+                correlation = corSymm(form = ~ as.numeric(Minutes) | Dog),
+                weights = varIdent(form = ~ 1 | Minutes),
+                na.action = na.omit,
+                data = dogsLongCC)
+isReversible(glsModCC)
+```
+
+Just what the boss ordered!
+
+#### Running the tests of choice
+
+The univariate tests test whether means of your groups ($g$) are equal or not.
+
+\begin{align}
+  &H_0: \mu_1 = \dots = \mu_g\\
+  &H_a: \text{At least one } \mu_i \text{ is not equal to the others}
+\end{align}
+
+Since we have a grouping factor (`Group`), we will have a `Group:Time` interaction term in the model. The hypotheses are slightly different since the effect of `Time` on `logHistamine` is assumed to differ for different groups.
+
+```{r}
+uniTest(glsModCC)
+```
+
+The boss' way:
+
+```{r}
+manovaMod <- manova(cbind(logHistamine0, logHistamine1, logHistamine3,
+                          logHistamine5) ~ Drug * Depleted, data = na.omit(dogsWide))
+uniTest(manovaMod)
+```
+
+Now let's assume there is no industry standard or reviewers that perpetuate the cycle of using RM ANOVA.  We'll include all available data.
+
+```{r}
+uniTest(glsMod)
+```
+
+## Example 2 - Orthodontic Data: Non-Reversible Models
+
+Multivariate analysis of variance (MANOVA)/repeated measures analysis of variance (RM ANOVA) will work with the data in the multivariate (wide) format while marginal models and mixed-effects models will work with the data in the univariate (long) format.
+
+### Wide format
+
+```{r, message = FALSE}
+orthodontWide
+```
+
+### Long format
+
+```{r, message = FALSE}
+orthodontLong
+```
+
+We can see with the long format data that we now have a `Distance` variable and a univariate `Age` variable.
+
+### Possible Workflow for This Data
+
+#### Check if the univariate model is reversible
+
+For this model, we are assuming that the effect of `Age` on `Distance` is NOT assumed to differ for different `Sex`es so that we omit the `Sex:Age` interaction from the model.
+
+```{r}
+glsMod <- gls(Distance ~ Sex + Age,
+              correlation =
+                corSymm(form = ~ as.numeric(Age) | Subject),
+              weights = varIdent(form = ~ 1 | Age),
+              na.action = na.omit,
+              data = orthodontLong)
+```
+
+Per the section title, let's check to see if this model is reversible:
+
+```{r}
+isReversible(glsMod)
+```
+
+Notice that this model doesn't correspond to a multivariate model.  Why is that?  Let's look at our formulas for both the multivariate and univariate models.
+
+MANOVA: `cbind(Distance8, Distance10, Distance12, Distance14) ~ Sex`     
+Marginal model: `Distance ~ Sex + Age`  
+
+The way that the multivariate model is set up requires all between-subject effects to be interacted with the within-subject effects, and the univariate model allows us to drop model terms individually.  This gives us additional flexibility to use the marginal model here.
+
+So what reduced models can be fit with the MANOVA approach?  In this particular case, we can drop the between-subject effect `Sex` and fit what's called an intercept-only model (this isn't entirely true since we still have an implicit within-subject effect).
+
+MANOVA: `cbind(Distance8, Distance10, Distance12, Distance14) ~ 1`
+
+Let's get back to our original analysis.
+
+#### Choose the covariance structure
+
+##### Likelihood Ratio Test Approach
+
+As in example 1, we can do a likelihood ratio test to see which covariance structure would be a better fit for our data:
+
+\begin{align}
+  &H_0: \text{The compound symmetry covariance structure is the better fit.}\\
+  &H_a: \text{The unstructured covariance structure is the better fit.}
+\end{align}
+
+```{r}
+nestedCovariance(glsMod)
+```
+
+This non-significant ($\alpha = 0.05$) p-value suggests that the model with the compound symmetry covariance structure is the better fitting model.  AIC and BIC are also in agreement with using the univariate tests since smaller is better.
+
+##### Sphericity Tests Approach
+
+An alternative approach we can try to determine what tests to use is Mauchly's test for sphericity.  If we have a significant p-value, we can choose either the multivariate tests for the within-subject effects or apply an epsilon correction to the univariate tests for a departure from sphericity.  Below we test whether the variances of all possible pairwise differences (${D_i}$) of the within-subject factors by case are equal or not:
+
+\begin{align}
+  &H_0: \sigma ^ 2 _ {D_1} = \cdots = \sigma ^ 2 _ {D_r}\\
+  &H_a: \text{At least one } \sigma ^ 2 _ {D_i} \text{ is not equal to the others}
+\end{align}
+
+```{r}
+sphericityTests(Ematrix(glsMod))
+```
+
+The sphericity assumption seems to be met, so we can use the univariate tests without any epsilon corrections.
+
+#### Univariate Tests
+
+The univariate tests test whether means of your groups ($g$) are equal or not.
+
+\begin{align}
+  &H_0: \mu_1 = \dots = \mu_g\\
+  &H_a: \text{At least one } \mu_i \text{ is not equal to the others}
+\end{align}
+
+We don't need to correct for sphericity in this case, but let's consider that in some cases we may want conservative results.  Let's look at the Greenhouse-Geisser epsilon first.  If the epsilon is greater than 0.75, then the Huynh-Feldt-Lecoutre epsilon is preferred to the Greenhouse-Geisser epsilon.
+
+```{r}
+epsilon(Ematrix(glsMod))
+```
+
+Let's use the Huynh-Feldt-Lecoutre epsilon instead.
+
+**Marginal model with a compound symmetry covariance structure**
+
+```{r}
+uniTest(glsMod, epsilon = "H")
+```
+
+**H and E matrices**
+
+```{r}
+uniTest(glsMod, refit = FALSE, epsilon = "H")
+```
