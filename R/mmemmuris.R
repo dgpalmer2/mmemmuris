@@ -94,7 +94,7 @@ uniTest.mlm <- function(fMod, within = "Time",
   test <- aov(as.formula(paste("y ~", formulae)), data = dat)
   betweenTests <- as.data.frame(summary(test)[[1]])
   colnames(betweenTests) <- c("df", "Sum Sq", "Mean Sq", "F", "Pr(>F)")
-  betweenTests <- cbind(betweenTests, sigStars(betweenTests$`Pr(>F)`))
+  betweenTests <- cbind(betweenTests, mmemmuris::sigStars(betweenTests$`Pr(>F)`))
   colnames(betweenTests)[length(colnames(betweenTests))] <- betweenTests[length(rownames(betweenTests)), length(colnames(betweenTests))] <- ""
 
   rowNames <- gsub(" ", "", rownames(betweenTests), fixed = TRUE)
@@ -117,10 +117,10 @@ uniTest.mlm <- function(fMod, within = "Time",
   withinTests <- data.frame(SSH = Hmatrices$SSH, dfNum = dfNum, SSE = Ematrices$SSE, dfDen = dfDen,
                             F = F, p.value = 1 - pf(F, dfNum, dfDen))
   colnames(withinTests)[c(2, 4, 6)] <- c("Num df", "Den df", "Pr(>F)")
-  withinTests <- cbind(withinTests, sigStars(withinTests$`Pr(>F)`))
+  withinTests <- cbind(withinTests, mmemmuris::sigStars(withinTests$`Pr(>F)`))
   colnames(withinTests)[length(colnames(withinTests))] <- ""
 
-  sphericityTestsRes <- sphericityTests(Ematrices)
+  sphericityTestsRes <- mmemmuris::sphericityTests(Ematrices)
   if((sphericityTestsRes$r - 1) == 1L){
     sphericityTests <- epsCorrect <- NULL
     correctMethod <- "Lower-Bound"
@@ -166,7 +166,7 @@ uniTest.mlm <- function(fMod, within = "Time",
   if((sphericityTestsRes$r - 1) != 1L){
     rownames(epsCorrect) <- rownames(withinTests$withinTests)
     colnames(epsCorrect) <- c("epsilon", "Num df", "Den df", "F", "Pr(>F)")
-    epsCorrect <- cbind(epsCorrect, sigStars(epsCorrect$`Pr(>F)`))
+    epsCorrect <- cbind(epsCorrect, mmemmuris::sigStars(epsCorrect$`Pr(>F)`))
     colnames(epsCorrect)[length(colnames(epsCorrect))] <- ""
     epsCorrect <- list(epsCorrect = epsCorrect, correctMethod = correctMethod)
     class(epsCorrect) <- c("list", "epsCorrect")
@@ -191,9 +191,9 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
   ddf <- "between-within"
   type <- "1"
   Esingular <- FALSE
-  if(covStruct(fMod) %in% c("cs", "other"))
+  if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
     stop("Only unstructured covariance models are allowed.", call. = FALSE)
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   data <- mmemmuris:::getDataset(fMod)
   Ematrices <- mmemmuris:::Ematrix.ulm(fMod, individual, ss)
   unV <- Ematrices$Vmatrix
@@ -221,8 +221,8 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
                      method = "REML")
     }
     L <- mmemmuris:::Lmatrix.ulm(fMod)
-    wald <- waldF(fMod, L)
-    wald$DenDF <- ddfBW(fMod)$`Den df`
+    wald <- mmemmuris::waldF(fMod, L)
+    wald$DenDF <- mmemmuris::ddfBW(fMod)$`Den df`
     wald$p.value <- 1 - pf(wald$F, wald$NumDF, wald$DenDF)
     wald <- as.data.frame(do.call("cbind", wald))
     waldB <- wald[tt$between,, drop = FALSE]
@@ -234,7 +234,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
     typeIW <- waldW[, c(7, 2, 6, 4, 1, 5)]
     # Calculate Greenhouse-Geisser and Huynh-Feldt(-Lecoutre) epsilons for
     # violations of sphericity
-    typeIB <- cbind(typeIB, sigStars(typeIB$`Pr(>F)`))
+    typeIB <- cbind(typeIB, mmemmuris::sigStars(typeIB$`Pr(>F)`))
     colnames(typeIB)[length(colnames(typeIB))] <- typeIB[length(rownames(typeIB)), length(colnames(typeIB))] <- ""
 
     typeIB <- list(betweenTests = typeIB, ddf = ddf, type = type)
@@ -243,7 +243,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
       sphericityTests <- epsCorrect <- NULL
       correctMethod <- ""
     }else{
-      sphericityTests <- sphericityTests(Ematrices)
+      sphericityTests <- mmemmuris::sphericityTests(Ematrices)
       if((sphericityTests$r - 1) == 1L){
         sphericityTests <- epsCorrect <- NULL
         correctMethod <- "Lower-Bound"
@@ -259,7 +259,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
                                           eps * as.numeric(typeIW$`Den df`)))
           rownames(epsCorrect) <- rownames(typeIW)
           colnames(epsCorrect) <- c("epsilon", "Num df", "Den df", "F", "Pr(>F)")
-          epsCorrect <- cbind(epsCorrect, sigStars(epsCorrect$`Pr(>F)`))
+          epsCorrect <- cbind(epsCorrect, mmemmuris::sigStars(epsCorrect$`Pr(>F)`))
           colnames(epsCorrect)[length(colnames(epsCorrect))] <- ""
           correctMethod <- "Greenhouse-Geisser"
         }else if(epsilon == "Huynh-Feldt-Lecoutre"){
@@ -273,7 +273,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
                                    row.names = NULL)
           rownames(epsCorrect) <- rownames(typeIW)
           colnames(epsCorrect) <- c("epsilon", "Num df", "Den df", "F", "Pr(>F)")
-          epsCorrect <- cbind(epsCorrect, sigStars(epsCorrect$`Pr(>F)`))
+          epsCorrect <- cbind(epsCorrect, mmemmuris::sigStars(epsCorrect$`Pr(>F)`))
           colnames(epsCorrect)[length(colnames(epsCorrect))] <- ""
           correctMethod <- "Huynh-Feldt-Lecoutre"
         }else{
@@ -287,7 +287,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
                                    row.names = NULL)
           rownames(epsCorrect) <- rownames(typeIW)
           colnames(epsCorrect) <- c("epsilon", "Num df", "Den df", "F", "Pr(>F)")
-          epsCorrect <- cbind(epsCorrect, sigStars(epsCorrect$`Pr(>F)`))
+          epsCorrect <- cbind(epsCorrect, mmemmuris::sigStars(epsCorrect$`Pr(>F)`))
           colnames(epsCorrect)[length(colnames(epsCorrect))] <- ""
           correctMethod <- "Lower-Bound"
         }
@@ -296,7 +296,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
       }
     }
 
-      typeIW <- cbind(typeIW, sigStars(typeIW$`Pr(>F)`))
+      typeIW <- cbind(typeIW, mmemmuris::sigStars(typeIW$`Pr(>F)`))
       colnames(typeIW)[length(colnames(typeIW))] <- ""
 
       typeIW <- list(withinTests = typeIW, ddf = ddf, type = type)
@@ -304,7 +304,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
 
     Lwithin <- lapply(mmemmuris:::Lmatrix.ulm(fMod)[tt$within], t)
     csV <- mmemmuris:::Vmatrix.ulm(fMod, individual = individual)
-    coefs <- coefs(fMod)
+    coefs <- mmemmuris::coefs(fMod)
     X <- model.matrix(fMod, data = mmemmuris:::getDataset(fMod))
     uniTest <- list(E = E, SSE = Ematrices$SSE,
                     betweenTests = typeIB,
@@ -326,7 +326,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
     test <- aov(as.formula(paste("y ~", formulae)), data = dat)
     typeIB <- as.data.frame(summary(test)[[1]])
     colnames(typeIB)[c(1, 4)] <- c("df", "F")
-    typeIB <- cbind(typeIB, sigStars(typeIB$`Pr(>F)`))
+    typeIB <- cbind(typeIB, mmemmuris::sigStars(typeIB$`Pr(>F)`))
     colnames(typeIB)[length(colnames(typeIB))] <- typeIB[length(rownames(typeIB)), length(colnames(typeIB))] <- ""
     typeIB <- list(betweenTests = typeIB, ddf = "between-within", type = type)
     class(typeIB) <- c("list", "betweenTests")
@@ -339,7 +339,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
     typeIW <- data.frame(SSH = H$SSH, Numdf = dfNum, SSE = Ematrices$SSE, Dendf = dfDen, F = Fstat, p.value = 1 - pf(Fstat, dfNum, dfDen))
     colnames(typeIW)[c(2, 4, 6)] <- c("Num df", "Den df", "Pr(>F)")
 
-    typeIW <- cbind(typeIW, sigStars(typeIW$`Pr(>F)`))
+    typeIW <- cbind(typeIW, mmemmuris::sigStars(typeIW$`Pr(>F)`))
     colnames(typeIW)[length(colnames(typeIW))] <- ""
     rownames(typeIW) <- tt$within
 
@@ -350,7 +350,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
       sphericityTests <- epsCorrect <- NULL
       correctMethod <- ""
     }else{
-      sphericityTests <- sphericityTests(Ematrices)
+      sphericityTests <- mmemmuris::sphericityTests(Ematrices)
       if((sphericityTests$r - 1) == 1L){
         sphericityTests <- epsCorrect <- NULL
         correctMethod <- "Lower-Bound"
@@ -366,7 +366,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
                                           eps * as.numeric(typeIW$withinTests$`Den df`)))
           rownames(epsCorrect) <- rownames(typeIW$withinTests)
           colnames(epsCorrect) <- c("epsilon", "Num df", "Den df", "F", "Pr(>F)")
-          epsCorrect <- cbind(epsCorrect, sigStars(epsCorrect$`Pr(>F)`))
+          epsCorrect <- cbind(epsCorrect, mmemmuris::sigStars(epsCorrect$`Pr(>F)`))
           colnames(epsCorrect)[length(colnames(epsCorrect))] <- ""
           rownames(epsCorrect) <- tt$within
           correctMethod <- "Greenhouse-Geisser"
@@ -381,7 +381,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
                                    row.names = NULL)
           rownames(epsCorrect) <- rownames(typeIW$withinTests)
           colnames(epsCorrect) <- c("epsilon", "Num df", "Den df", "F", "Pr(>F)")
-          epsCorrect <- cbind(epsCorrect, sigStars(epsCorrect$`Pr(>F)`))
+          epsCorrect <- cbind(epsCorrect, mmemmuris::sigStars(epsCorrect$`Pr(>F)`))
           colnames(epsCorrect)[length(colnames(epsCorrect))] <- ""
           rownames(epsCorrect) <- tt$within
           correctMethod <- "Huynh-Feldt-Lecoutre"
@@ -396,7 +396,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
                                    row.names = NULL)
           rownames(epsCorrect) <- rownames(typeIW$withinTests)
           colnames(epsCorrect) <- c("epsilon", "Num df", "Den df", "F", "Pr(>F)")
-          epsCorrect <- cbind(epsCorrect, sigStars(epsCorrect$`Pr(>F)`))
+          epsCorrect <- cbind(epsCorrect, mmemmuris::sigStars(epsCorrect$`Pr(>F)`))
           colnames(epsCorrect)[length(colnames(epsCorrect))] <- ""
           rownames(epsCorrect) <- tt$within
           correctMethod <- "Lower-Bound"
@@ -407,7 +407,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
     }
 
     Lwithin <- lapply(mmemmuris:::Lmatrix.ulm(fMod)[tt$within], t)
-    coefs <- coefs(fMod)
+    coefs <- mmemmuris::coefs(fMod)
     X <- model.matrix(fMod, data = mmemmuris:::getDataset(fMod))
     uniTest <- list(E = E, SSE = Ematrices$SSE,
                     betweenTests = typeIB,
@@ -619,7 +619,7 @@ uniTest <- function(fMod, individual = NULL, within = "Time", epsilon = c("Green
 
 wilksLambda.ulm <- function(fMod, individual = NULL, approximation = c("Rao", "Bartlett", "LR"), LR = TRUE, ss = NULL){
   approximation <- match.arg(approximation)
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   wilks <- mmemmuris:::lambda.ulm(fMod, individual, LR = LR, ss = ss)
 
   if(approximation == "Rao"){
@@ -996,9 +996,9 @@ lambda.mlm <- function(fMod, within = "Time"){
 
 lambda.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
   type <- "1"
-  if(covStruct(fMod) %in% c("cs", "other"))
+  if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
     stop("Only unstructured covariance models are allowed.", call. = FALSE)
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   HBsingular <- Hsingular <- FALSE
   E <- mmemmuris:::Ematrix.ulm(fMod, individual, ss)
   H <- mmemmuris:::Hmatrix.ulm(fMod)
@@ -1047,12 +1047,9 @@ lambda.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
       term <- attr(terms(fMod), "term.labels")
       index <- grepl(paste0(":", tt$within[1], "|", tt$within[1], ":"), term)
       index <- unname(as.list(data.frame(rbind(tt$between, term[index]))))
-      # index <- lapply(tt$between, function(x){
-      #   c(x, paste0(x, ":", tt$within[1]), paste0(tt$within[1], ":", x))
-      # })
       L <- lapply(index, function(x){ do.call("rbind", mmemmuris:::Lmatrix.ulm(fMod)[x]) })
       names(L) <- tt$between
-      LRTbetween <- LRT(fMod, L)
+      LRTbetween <- mmemmuris::LRT(fMod, L)
 
       X2Between <- sapply(LRTbetween, function(x){
         x$L.Ratio[2]
@@ -1061,7 +1058,7 @@ lambda.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
       lambdaBetween <- exp(-(X2Between) / n)
     }
 
-    LRTwithin <- LRT(fMod, Lwithin)
+    LRTwithin <- mmemmuris::LRT(fMod, Lwithin)
 
     X2Within <- sapply(LRTwithin, function(x){
       x$L.Ratio[2]
@@ -1186,9 +1183,9 @@ V.mlm <- function(fMod, within = "Time"){
 
 V.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
   type <- "1"
-  if(covStruct(fMod) %in% c("cs", "other"))
+  if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
     stop("Only unstructured covariance models are allowed.", call. = FALSE)
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   HBsingular <- Hsingular <- FALSE
   E <- mmemmuris:::Ematrix.ulm(fMod, individual, ss)
   H <- mmemmuris:::Hmatrix.ulm(fMod)
@@ -1237,12 +1234,9 @@ V.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
       term <- attr(terms(fMod), "term.labels")
       index <- grepl(paste0(":", tt$within[1], "|", tt$within[1], ":"), term)
       index <- unname(as.list(data.frame(rbind(tt$between, term[index]))))
-      # index <- lapply(tt$between, function(x){
-      #   c(x, paste0(x, ":", tt$within[1]), paste0(tt$within[1], ":", x))
-      # })
       L <- lapply(index, function(x){ do.call("rbind", mmemmuris:::Lmatrix.ulm(fMod)[x]) })
       names(L) <- tt$between
-      LRTbetween <- LRT(fMod, L)
+      LRTbetween <- mmemmuris::LRT(fMod, L)
 
       X2Between <- sapply(LRTbetween, function(x){
         x$L.Ratio[2]
@@ -1251,7 +1245,7 @@ V.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
       VBetween <- 1 - exp(-(X2Between) / n)
     }
 
-    LRTwithin <- LRT(fMod, Lwithin)
+    LRTwithin <- mmemmuris::LRT(fMod, Lwithin)
 
     X2Within <- sapply(LRTwithin, function(x){
       x$L.Ratio[2]
@@ -1366,7 +1360,7 @@ pillaiTrace.mlm <- function(fMod, approximation = c("Muller", "Pillai"), within 
 
 pillaiTrace.ulm <- function(fMod, individual = NULL, approximation = c("Muller", "Pillai"), LR = TRUE, ss = NULL){
   approximation <- match.arg(approximation)
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   V <- mmemmuris:::V.ulm(fMod, individual, LR = LR, ss = ss)
 
   if(approximation == "Muller"){
@@ -1667,9 +1661,9 @@ U.mlm <- function(fMod, within = "Time"){
 
 U.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
   type <- "1"
-  if(covStruct(fMod) %in% c("cs", "other"))
+  if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
     stop("Only unstructured covariance models are allowed.", call. = FALSE)
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   EBsingular <- Esingular <- FALSE
   E <- mmemmuris:::Ematrix.ulm(fMod, individual, ss)
   H <- mmemmuris:::Hmatrix.ulm(fMod)
@@ -1717,7 +1711,7 @@ U.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
     rankX <- Matrix::rankMatrix(X)
     attributes(rankX) <- NULL
     v <- n - rankX
-    fMod <- MLtoREML(fMod)
+    fMod <- mmemmuris::MLtoREML(fMod)
 
     L <- mmemmuris:::Lmatrix.ulm(fMod)
     Lwithin <- L[tt$within]
@@ -1727,18 +1721,15 @@ U.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
       term <- attr(terms(fMod), "term.labels")
       index <- grepl(paste0(":", tt$within[1], "|", tt$within[1], ":"), term)
       index <- unname(as.list(data.frame(rbind(tt$between, term[index]))))
-      # index <- lapply(tt$between, function(x){
-      #   c(x, paste0(x, ":", tt$within[1]), paste0(tt$within[1], ":", x))
-      # })
       L <- lapply(index, function(x){ do.call("rbind", mmemmuris:::Lmatrix.ulm(fMod)[x]) })
       names(L) <- tt$between
-      waldBetween <- waldF(fMod, L)
+      waldBetween <- mmemmuris::waldF(fMod, L)
 
       X2Between <- waldBetween$X2
       UBetween <- X2Between / v
     }
 
-    waldWithin <- waldF(fMod, Lwithin)
+    waldWithin <- mmemmuris::waldF(fMod, Lwithin)
     X2Within <- waldWithin$X2
     UWithin <- X2Within / v
 
@@ -2003,7 +1994,7 @@ hlTrace <- function(fMod, individual = NULL, approximation = c("McKeon", "Pillai
 
 hlTrace.ulm <- function(fMod, individual = NULL, approximation = c("McKeon", "Pillai-Samson", "Wald"), waldF = TRUE, ss = NULL){
   approximation <- match.arg(approximation)
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   hlt <- mmemmuris:::U.ulm(fMod, individual, waldF = waldF, ss = ss)
 
   if(approximation == "McKeon"){
@@ -2352,7 +2343,7 @@ royGR.mlm <- function(fMod, within = "Time"){
                                p.value = 1 - pf(FrgrWithin, rWithin, theta$v - rWithin + theta$qWithin))
 
   colnames(termsRGRWithin) <- c("Num df", "Den df", "theta", "F", "Pr(>F)")
-  termsRGRWithin <- cbind(termsRGRWithin, sigStars(termsRGRWithin$`Pr(>F)`))
+  termsRGRWithin <- cbind(termsRGRWithin, mmemmuris::sigStars(termsRGRWithin$`Pr(>F)`))
   colnames(termsRGRWithin)[length(colnames(termsRGRWithin))] <- ""
 
   withinTests <- list(rgr = termsRGRWithin,
@@ -2372,7 +2363,7 @@ royGR.mlm <- function(fMod, within = "Time"){
                                   p.value = 1 - pf(FrgrBetween, rBetween, theta$v - rBetween + theta$qBetween))
 
     colnames(termsRGRBetween) <- c("Num df", "Den df", "theta", "F", "Pr(>F)")
-    termsRGRBetween <- cbind(termsRGRBetween, sigStars(termsRGRBetween$`Pr(>F)`))
+    termsRGRBetween <- cbind(termsRGRBetween, mmemmuris::sigStars(termsRGRBetween$`Pr(>F)`))
     colnames(termsRGRBetween)[length(colnames(termsRGRBetween))] <- ""
 
     betweenTests <- list(rgr = termsRGRBetween[rownames(termsRGRBetween) != "(Intercept)", ],
@@ -2395,7 +2386,7 @@ royGR.mlm <- function(fMod, within = "Time"){
 }
 
 royGR.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   theta <- mmemmuris:::theta.ulm(fMod, individual, waldF = waldF, ss = ss)
 
   rWithin <- apply(cbind(theta$pWithin, theta$qWithin), 1, max)
@@ -2408,7 +2399,7 @@ royGR.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
                                p.value = 1 - pf(FrgrWithin, rWithin, theta$v - rWithin + theta$qWithin))
 
   colnames(termsRGRWithin) <- c("Num df", "Den df", "theta", "F", "Pr(>F)")
-  termsRGRWithin <- cbind(termsRGRWithin, sigStars(termsRGRWithin$`Pr(>F)`))
+  termsRGRWithin <- cbind(termsRGRWithin, mmemmuris::sigStars(termsRGRWithin$`Pr(>F)`))
   colnames(termsRGRWithin)[length(colnames(termsRGRWithin))] <- ""
 
   if(theta$waldF == TRUE){
@@ -2437,7 +2428,7 @@ royGR.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
                                   p.value = 1 - pf(FrgrBetween, rBetween, theta$v - rBetween + theta$qBetween))
 
     colnames(termsRGRBetween) <- c("Num df", "Den df", "theta", "F", "Pr(>F)")
-    termsRGRBetween <- cbind(termsRGRBetween, sigStars(termsRGRBetween$`Pr(>F)`))
+    termsRGRBetween <- cbind(termsRGRBetween, mmemmuris::sigStars(termsRGRBetween$`Pr(>F)`))
     colnames(termsRGRBetween)[length(colnames(termsRGRBetween))] <- ""
 
     if(theta$waldF){
@@ -2523,9 +2514,9 @@ theta.mlm <- function(fMod, within = "Time"){
 
 theta.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
   type <- "1"
-  if(covStruct(fMod) %in% c("cs", "other"))
+  if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
     stop("Only unstructured covariance models are allowed.", call. = FALSE)
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   EBsingular <- Esingular <- FALSE
   E <- mmemmuris:::Ematrix.ulm(fMod, individual, ss)
   H <- mmemmuris:::Hmatrix.ulm(fMod)
@@ -2573,7 +2564,7 @@ theta.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
     rankX <- Matrix::rankMatrix(X)
     attributes(rankX) <- NULL
     v <- n - rankX
-    fMod <- MLtoREML(fMod)
+    fMod <- mmemmuris::MLtoREML(fMod)
 
     L <- mmemmuris:::Lmatrix.ulm(fMod)
     Lwithin <- L[tt$within]
@@ -2583,18 +2574,15 @@ theta.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
       term <- attr(terms(fMod), "term.labels")
       index <- grepl(paste0(":", tt$within[1], "|", tt$within[1], ":"), term)
       index <- unname(as.list(data.frame(rbind(tt$between, term[index]))))
-      # index <- lapply(tt$between, function(x){
-      #   c(x, paste0(x, ":", tt$within[1]), paste0(tt$within[1], ":", x))
-      # })
       L <- lapply(index, function(x){ do.call("rbind", mmemmuris:::Lmatrix.ulm(fMod)[x]) })
       names(L) <- tt$between
-      waldBetween <- waldF(fMod, L)
+      waldBetween <- mmemmuris::waldF(fMod, L)
 
       X2Between <- waldBetween$X2
       thetaBetween <- X2Between / v
     }
 
-    waldWithin <- waldF(fMod, Lwithin)
+    waldWithin <- mmemmuris::waldF(fMod, Lwithin)
     X2Within <- waldWithin$X2
     thetaWithin <- X2Within / v
 
@@ -2663,7 +2651,7 @@ makeRoyGR.ulm <- function(theta){
                                p.value = 1 - pf(FrgrWithin, rWithin, theta$v - rWithin + theta$qWithin))
 
   colnames(termsRGRWithin) <- c("Num df", "Den df", "theta", "F", "Pr(>F)")
-  termsRGRWithin <- cbind(termsRGRWithin, sigStars(termsRGRWithin$`Pr(>F)`))
+  termsRGRWithin <- cbind(termsRGRWithin, mmemmuris::sigStars(termsRGRWithin$`Pr(>F)`))
   colnames(termsRGRWithin)[length(colnames(termsRGRWithin))] <- ""
 
   if(theta$waldF == TRUE){
@@ -2692,7 +2680,7 @@ makeRoyGR.ulm <- function(theta){
                                   p.value = 1 - pf(FrgrBetween, rBetween, theta$v - rBetween + theta$qBetween))
 
     colnames(termsRGRBetween) <- c("Num df", "Den df", "theta", "F", "Pr(>F)")
-    termsRGRBetween <- cbind(termsRGRBetween, sigStars(termsRGRBetween$`Pr(>F)`))
+    termsRGRBetween <- cbind(termsRGRBetween, mmemmuris::sigStars(termsRGRBetween$`Pr(>F)`))
     colnames(termsRGRBetween)[length(colnames(termsRGRBetween))] <- ""
 
     if(theta$waldF){
@@ -2858,12 +2846,12 @@ makeRoyGR.ulm <- function(theta){
 
 nestedCovariance <- function(fMod){
   if(any(class(fMod) %in% c("gls", "lme"))){
-    if(covStruct(fMod) %in% c("cs", "other"))
+    if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
       stop("Only unstructured covariance models are allowed.", call. = FALSE)
-    # tt <- termsType(fMod)
+    # tt <- mmemmuris::termsType(fMod)
     # data <- mmemmuris:::getDataset(fMod)
     # Refit models w/ ML if fit by REML
-    fMod <- REMLtoML(fMod)
+    fMod <- mmemmuris::REMLtoML(fMod)
     if(class(fMod) == "gls"){
       rMod <- update(fMod,
                      correlation = nlme::corCompSymm(form = as.formula(paste("~ 1 | ", as.character(nlme::getGroupsFormula(fMod))[2]))),
@@ -2887,12 +2875,12 @@ nestedCovariance <- function(fMod){
     nestedCov <- nestedCov[, !colnames(nestedCov) %in% c("call", "Model", "Test")]
   }else if(any(class(fMod) %in% "mlm")){
     dat <- na.omit(mmemmuris:::getDataset(fMod))
-    V <- Vmatrix(fMod)$unV
+    V <- mmemmuris::Vmatrix(fMod)$unV
     V <- as.matrix(bdiag(replicate(nrow(dat), V, simplify = FALSE)))
     r <- cbind(c(t(residuals(fMod))))
     N <- nrow(dat) * length(colnames(coef(fMod)))
     UN <- (-1 / 2) * log(det(V)) - ((1 / 2) * t(r) %*% solve(V) %*% r) - (N / 2) * log(2 * pi)
-    V <- (fMod$df.residual / nrow(dat)) * Vmatrix(fMod)$csV
+    V <- (fMod$df.residual / nrow(dat)) * mmemmuris::Vmatrix(fMod)$csV
     V <- as.matrix(bdiag(replicate(nrow(dat), V, simplify = FALSE)))
     CS <- (-1 / 2) * log(det(V)) - ((1 / 2) * t(r) %*% solve(V) %*% r) - (N / 2) * log(2 * pi)
     dfModel <- c(length(coef(fMod)) + 2, length(coef(fMod)) + ((length(colnames(coef(fMod))) * (length(colnames(coef(fMod))) + 1)) / 2))
@@ -2909,7 +2897,7 @@ nestedCovariance <- function(fMod){
     stop('Please input a model of class "gls", "lme", or "mlm".', call. = FALSE)
   }
   colnames(nestedCov)[6] <- "Pr(>Chisq)"
-  nestedCov <- cbind(nestedCov, sigStars(nestedCov$`Pr(>Chisq)`))
+  nestedCov <- cbind(nestedCov, mmemmuris::sigStars(nestedCov$`Pr(>Chisq)`))
   nestedCov <- list(nestedCov = nestedCov)
   class(nestedCov) <- c("list", "nestedCovariance")
   return(nestedCov)
@@ -2967,7 +2955,7 @@ nestedCovariance <- function(fMod){
 
 ddfResidual <- function(fMod){
   if(any(class(fMod) %in% c("gls", "lme"))){
-    tt <- termsType(fMod)
+    tt <- mmemmuris::termsType(fMod)
     X <- model.matrix(fMod, data = mmemmuris:::getDataset(fMod))
     rDenDF <- fMod$dims$N - Matrix::rankMatrix(X)
     attributes(rDenDF) <- NULL
@@ -3491,7 +3479,7 @@ print.nestedCovariance <- function(nestedCovariance, digits = 4){
 
 Lmatrix.ulm <- function(fMod){
   terms <- terms(fMod)
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   X <- model.matrix(fMod, data = mmemmuris:::getDataset(fMod))
   if (ncol(X) == 1L)
     matrix(1L)
@@ -3637,7 +3625,7 @@ Vmatrix.ulm <- function(fMod, individual = NULL, full = FALSE){
     }
   }
 
-  if(covStruct(fMod) == "cs" & full == FALSE){
+  if(mmemmuris::covStruct(fMod) == "cs" & full == FALSE){
     CS <- unique(Vmatrix[row(Vmatrix) != col(Vmatrix)])
     MSresidual <- unique(diag(Vmatrix)) - CS
     V <- list(V = Vmatrix, csCovParms = c(CS, MSresidual))
@@ -3649,16 +3637,16 @@ Vmatrix.ulm <- function(fMod, individual = NULL, full = FALSE){
 }
 
 Ematrix.ulm <- function(fMod, individual = NULL, ss = NULL){
-  if(covStruct(fMod) %in% c("cs", "other"))
+  if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
     stop("Only unstructured covariance models are allowed.", call. = FALSE)
-  fMod <- REMLtoML(fMod)
+  fMod <- mmemmuris::REMLtoML(fMod)
   Vmatrix <- mmemmuris:::Vmatrix.ulm(fMod, individual = individual)
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   data <- mmemmuris:::getDataset(fMod)
   if(!is.null(ss) & is.numeric(ss) & length(ss) == 1L)
     n <- ss
   else
-    n <- mmemmuris:::completeData(fMod)$n
+    n <- mmemmuris::completeData(fMod)$n
   if(ncol(Vmatrix$V) == 0L)
     stop('Please provide a valid V matrix through the "individual" argument.', call. = FALSE)
   MB <- diag(1, nrow(Vmatrix$V))
@@ -3868,7 +3856,7 @@ Hmatrix.mlm <- function(fMod, within = "Time"){
 }
 
 Hmatrix.ulm <- function(fMod){
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   dataset <- na.omit(mmemmuris:::getDataset(fMod))
   Xbetween <- tt$Xbetween
   X <- model.matrix(fMod, data = dataset)
@@ -3881,7 +3869,7 @@ Hmatrix.ulm <- function(fMod){
   for(i in 1:length(table(withinLevels))){
     dataset[[withinFac]] <- relevel(withinLevels, ref = i)
     fMod <- update(fMod, data = dataset)
-    B[[i]] <- coefs(fMod)
+    B[[i]] <- mmemmuris::coefs(fMod)
   }
   B <- do.call("cbind", B)
 
@@ -3942,82 +3930,6 @@ Hmatrix.ulm <- function(fMod){
   class(Hmatrix) <- c("list", "Hmatrix.ulm")
   return(Hmatrix)
 }
-
-# Hmatrix.ulm <- function(fMod){
-#   tt <- termsType(fMod)
-#   dataset <- na.omit(mmemmuris:::getDataset(fMod))
-#   Xbetween <- tt$Xbetween
-#   X <- model.matrix(fMod, data = dataset)
-#   B <- list()
-#   orders <- attr(terms(fMod), "order")
-#   names(orders) <- attr(terms(fMod), "term.labels")
-#   withinFac <- names(orders[(names(orders) %in% tt$within) & orders ==
-#                                  1])
-#   withinLevels <- droplevels(dataset[[withinFac]])
-#   for(i in 1:length(table(withinLevels))){
-#     dataset[[withinFac]] <- relevel(withinLevels, ref = i)
-#     fMod <- update(fMod, data = dataset)
-#     B[[i]] <- coefs(fMod)
-#   }
-#   B <- do.call("cbind", B)
-#
-#   Lbetween <- t(as.matrix(Matrix::expand(Matrix::lu(t(Xbetween) %*% Xbetween))$L))
-#   rownames(Lbetween) <- colnames(Lbetween) <- colnames(Xbetween)
-#
-#   termsIndex <- attr(Xbetween, "assign")
-#   tableTerms <- table(termsIndex)
-#   termsLabels <- rep(c("(Intercept)", attr(terms(fMod), "term.labels")[attr(terms(fMod), "term.labels") %in% tt$between]), tableTerms)
-#   term <- c("(Intercept)", attr(terms(fMod), "term.labels")[attr(terms(fMod), "term.labels") %in% tt$between])
-#   rowIndex <- list()
-#   for(i in 1:length(term)){
-#     rowIndex[[i]] <- which(termsLabels == term[i])
-#     names(rowIndex)[i] <- term[i]
-#   }
-#   Lbetween <- lapply(rowIndex, function(x){
-#     Lbetween[x,, drop = FALSE]
-#   })
-#
-#   termsIndex2 <- attr(X, "assign")
-#
-#   tableTerms2 <- table(termsIndex2)
-#
-#   termsLabels2 <- rep(c("(Intercept)", attr(terms(fMod), "term.labels")), tableTerms2)
-#   term <- c("(Intercept)", attr(terms(fMod), "term.labels")[attr(terms(fMod), "term.labels") %in% tt$between])
-#
-#   rowIndex <- list()
-#   for(i in 1:length(term)){
-#     rowIndex[[i]] <- which(termsLabels2 == term[i])
-#     names(rowIndex)[i] <- term[i]
-#   }
-#
-#   B <- B[unlist(rowIndex),, drop = FALSE]
-#
-#   nr <- nrow(t(B))
-#
-#   M <- contr.sum(nr)
-#
-#   H <- lapply(Lbetween, function(x){
-#     t(M) %*% t(B) %*% t(x) %*% solve(x %*% MASS::ginv(t(Xbetween) %*% Xbetween) %*% t(x)) %*% x %*% B %*% M
-#   })
-#
-#   H <- H[1:length(tt$within)]
-#
-#   names(H) <- tt$within
-#
-#   SSH <- sapply(H, function(x){
-#     sum(diag(x %*% solve(t(M) %*% M)))
-#   })
-#
-#   MB <- diag(1, nr)
-#   HB <- lapply(Lbetween, function(x){
-#     t(MB) %*% t(B) %*% t(x) %*% solve(x %*% MASS::ginv(t(Xbetween) %*% Xbetween) %*% t(x)) %*% x %*% B %*% MB
-#   })
-#
-#   Hmatrix <- list(H = H, M = M, SSH = SSH, HB = HB, MB = MB, B = B, X = Xbetween,
-#                   Lbetween = Lbetween)
-#   class(Hmatrix) <- c("list", "Hmatrix.ulm")
-#   return(Hmatrix)
-# }
 
 #' MANOVA/RM ANOVA SSCP Hypothesis (**H**) Matrix
 #' @export
@@ -4313,7 +4225,7 @@ sphericityTests <- function(Ematrices){
                         p.value = 1 - pchisq(ChiW, ((Ematrices$r - 1) * (Ematrices$r) / 2) - 1))
     rownames(spher) <- ""
     colnames(spher) <- c("W", "rho", "df", "Chisq", "Pr(>Chisq)")
-    spher <- cbind(spher, sigStars(spher$`Pr(>Chisq)`))
+    spher <- cbind(spher, mmemmuris::sigStars(spher$`Pr(>Chisq)`))
     colnames(spher)[length(colnames(spher))] <- rownames(spher)[length(rownames(spher))] <- ""
     sphericityTests <- list(sphericityTests = spher, r = Ematrices$r, v = v, E = Ematrices$E, M = Ematrices$M)
     class(sphericityTests) <- c("list", "sphericityTests")
@@ -4344,15 +4256,18 @@ print.sphericityTests <- function(sphericityTests, digits = 4){
 }
 
 colSpaceX2inColSpaceX1 <- function(X1, L){
-  if(ncol(X1) != ncol(L))
-    stop("The number of columns of the design matrix and L matrix don't match.")
-  else{
-    tL <- t(L)
-    orthComp <- qr.Q(qr(cbind(tL)), complete = TRUE)[, -c(1:Matrix::rankMatrix(tL)), drop = FALSE]
-    X2 <- X1 %*% orthComp
-    colnames(X2) <- paste0("Col", 1:ncol(X2))
-  }
-  return(X2)
+  if(is.matrix(L)){
+    if(ncol(X1) != ncol(L))
+      stop("The number of columns of the design matrix and L matrix don't match.")
+    else{
+      tL <- t(L)
+      orthComp <- qr.Q(qr(cbind(tL)), complete = TRUE)[, -c(1:Matrix::rankMatrix(tL)), drop = FALSE]
+      X2 <- X1 %*% orthComp
+      colnames(X2) <- paste0("Col", 1:ncol(X2))
+    }
+    return(X2)
+  }else
+    stop('"L" must be a matrix.', call. = FALSE)
 }
 
 Lmatrix.mlm <- function(fMod){
@@ -4583,7 +4498,7 @@ raoF <- function(lambda){
 
       colnames(termsWilksBetween) <- c("Num df", "Den df", "lambda", "F", "Pr(>F)")
 
-      termsWilksBetween <- cbind(termsWilksBetween, sigStars(termsWilksBetween$`Pr(>F)`))
+      termsWilksBetween <- cbind(termsWilksBetween, mmemmuris::sigStars(termsWilksBetween$`Pr(>F)`))
 
       colnames(termsWilksBetween)[length(colnames(termsWilksBetween))] <- ""
 
@@ -4616,7 +4531,7 @@ raoF <- function(lambda){
 
     colnames(termsWilksWithin) <- c("Num df", "Den df", "lambda", "F", "Pr(>F)")
 
-    termsWilksWithin <- cbind(termsWilksWithin, sigStars(termsWilksWithin$`Pr(>F)`))
+    termsWilksWithin <- cbind(termsWilksWithin, mmemmuris::sigStars(termsWilksWithin$`Pr(>F)`))
 
     colnames(termsWilksWithin)[length(colnames(termsWilksWithin))] <- ""
 
@@ -4652,7 +4567,7 @@ lrChi <- function(lambda){
 
       colnames(termsWilksBetween) <- c("df", "lambda", "Chisq", "Pr(>Chisq)")
 
-      termsWilksBetween <- cbind(termsWilksBetween, sigStars(termsWilksBetween$`Pr(>Chisq)`))
+      termsWilksBetween <- cbind(termsWilksBetween, mmemmuris::sigStars(termsWilksBetween$`Pr(>Chisq)`))
       colnames(termsWilksBetween)[length(colnames(termsWilksBetween))] <- ""
 
       wilksBetween <- list(wilks = termsWilksBetween[rownames(termsWilksBetween) != "(Intercept)", ],
@@ -4674,7 +4589,7 @@ lrChi <- function(lambda){
 
     colnames(termsWilksWithin) <- c("df", "lambda", "Chisq", "Pr(>Chisq)")
 
-    termsWilksWithin <- cbind(termsWilksWithin, sigStars(termsWilksWithin$`Pr(>Chisq)`))
+    termsWilksWithin <- cbind(termsWilksWithin, mmemmuris::sigStars(termsWilksWithin$`Pr(>Chisq)`))
     colnames(termsWilksWithin)[length(colnames(termsWilksWithin))] <- ""
 
     wilksWithin <- list(wilks = termsWilksWithin,
@@ -4710,7 +4625,7 @@ BChi <- function(lambda){
 
       colnames(termsWilksBetween) <- c("df", "lambda", "Chisq", "Pr(>Chisq)")
 
-      termsWilksBetween <- cbind(termsWilksBetween, sigStars(termsWilksBetween$`Pr(>Chisq)`))
+      termsWilksBetween <- cbind(termsWilksBetween, mmemmuris::sigStars(termsWilksBetween$`Pr(>Chisq)`))
       colnames(termsWilksBetween)[length(colnames(termsWilksBetween))] <- ""
 
       wilksBetween <- list(wilks = termsWilksBetween[rownames(termsWilksBetween) != "(Intercept)", ],
@@ -4733,7 +4648,7 @@ BChi <- function(lambda){
 
     colnames(termsWilksWithin) <- c("df", "lambda", "Chisq", "Pr(>Chisq)")
 
-    termsWilksWithin <- cbind(termsWilksWithin, sigStars(termsWilksWithin$`Pr(>Chisq)`))
+    termsWilksWithin <- cbind(termsWilksWithin, mmemmuris::sigStars(termsWilksWithin$`Pr(>Chisq)`))
     colnames(termsWilksWithin)[length(colnames(termsWilksWithin))] <- ""
 
     wilksWithin <- list(wilks = termsWilksWithin,
@@ -4831,7 +4746,7 @@ mullerF <- function(V){
 
       colnames(termsPillaiBetween) <- c("Num df", "Den df", "V", "F", "Pr(>F)")
 
-      termsPillaiBetween <- cbind(termsPillaiBetween, sigStars(termsPillaiBetween$`Pr(>F)`))
+      termsPillaiBetween <- cbind(termsPillaiBetween, mmemmuris::sigStars(termsPillaiBetween$`Pr(>F)`))
 
       colnames(termsPillaiBetween)[length(colnames(termsPillaiBetween))] <- ""
 
@@ -4880,7 +4795,7 @@ mullerF <- function(V){
 
     colnames(termsPillaiWithin) <- c("Num df", "Den df", "V", "F", "Pr(>F)")
 
-    termsPillaiWithin <- cbind(termsPillaiWithin, sigStars(termsPillaiWithin$`Pr(>F)`))
+    termsPillaiWithin <- cbind(termsPillaiWithin, mmemmuris::sigStars(termsPillaiWithin$`Pr(>F)`))
 
     colnames(termsPillaiWithin)[length(colnames(termsPillaiWithin))] <- ""
 
@@ -4941,7 +4856,7 @@ pillaiF <- function(V){
 
       colnames(termsPillaiBetween) <- c("Num df", "Den df", "V", "F", "Pr(>F)")
 
-      termsPillaiBetween <- cbind(termsPillaiBetween, sigStars(termsPillaiBetween$`Pr(>F)`))
+      termsPillaiBetween <- cbind(termsPillaiBetween, mmemmuris::sigStars(termsPillaiBetween$`Pr(>F)`))
 
       colnames(termsPillaiBetween)[length(colnames(termsPillaiBetween))] <- ""
 
@@ -4989,7 +4904,7 @@ pillaiF <- function(V){
 
     colnames(termsPillaiWithin) <- c("Num df", "Den df", "V", "F", "Pr(>F)")
 
-    termsPillaiWithin <- cbind(termsPillaiWithin, sigStars(termsPillaiWithin$`Pr(>F)`))
+    termsPillaiWithin <- cbind(termsPillaiWithin, mmemmuris::sigStars(termsPillaiWithin$`Pr(>F)`))
 
     colnames(termsPillaiWithin)[length(colnames(termsPillaiWithin))] <- ""
 
@@ -5088,7 +5003,7 @@ mckeonF <- function(U){
                                    p.value = 1 - pf(FUBetween, dfNumBetween, dfDenBetween))
 
       colnames(termsHLBetween) <- c("Num df", "Den df", "U", "F", "Pr(>F)")
-      termsHLBetween <- cbind(termsHLBetween, sigStars(termsHLBetween$`Pr(>F)`))
+      termsHLBetween <- cbind(termsHLBetween, mmemmuris::sigStars(termsHLBetween$`Pr(>F)`))
       colnames(termsHLBetween)[length(colnames(termsHLBetween))] <- ""
 
       hltBetween <- list(hlt = termsHLBetween[rownames(termsHLBetween) != "(Intercept)", ],
@@ -5117,7 +5032,7 @@ mckeonF <- function(U){
                                 p.value = 1 - pf(FUWithin, dfNumWithin, dfDenWithin))
 
     colnames(termsHLWithin) <- c("Num df", "Den df", "U", "F", "Pr(>F)")
-    termsHLWithin <- cbind(termsHLWithin, sigStars(termsHLWithin$`Pr(>F)`))
+    termsHLWithin <- cbind(termsHLWithin, mmemmuris::sigStars(termsHLWithin$`Pr(>F)`))
     colnames(termsHLWithin)[length(colnames(termsHLWithin))] <- ""
 
     hltWithin <- list(hlt = termsHLWithin[rownames(termsHLWithin) != "(Intercept)", ],
@@ -5158,7 +5073,7 @@ psF <- function(U){
                                    p.value = 1 - pf(FUBetween, dfNumBetween, dfDenBetween))
 
       colnames(termsHLBetween) <- c("Num df", "Den df", "U", "F", "Pr(>F)")
-      termsHLBetween <- cbind(termsHLBetween, sigStars(termsHLBetween$`Pr(>F)`))
+      termsHLBetween <- cbind(termsHLBetween, mmemmuris::sigStars(termsHLBetween$`Pr(>F)`))
       colnames(termsHLBetween)[length(colnames(termsHLBetween))] <- ""
 
       hltBetween <- list(hlt = termsHLBetween[rownames(termsHLBetween) != "(Intercept)", ],
@@ -5186,7 +5101,7 @@ psF <- function(U){
                                 p.value = 1 - pf(FUWithin, dfNumWithin, dfDenWithin))
 
     colnames(termsHLWithin) <- c("Num df", "Den df", "U", "F", "Pr(>F)")
-    termsHLWithin <- cbind(termsHLWithin, sigStars(termsHLWithin$`Pr(>F)`))
+    termsHLWithin <- cbind(termsHLWithin, mmemmuris::sigStars(termsHLWithin$`Pr(>F)`))
     colnames(termsHLWithin)[length(colnames(termsHLWithin))] <- ""
 
     hltWithin <- list(hlt = termsHLWithin[rownames(termsHLWithin) != "(Intercept)", ],
@@ -5217,7 +5132,7 @@ waldChi <- function(U){
                                    Chisq = U$X2Between,
                                    p.value = 1 - pchisq(U$X2Between, U$pBetween * U$qBetween))
       colnames(termsHLBetween) <- c("df", "U", "Chisq", "Pr(>Chisq)")
-      termsHLBetween <- cbind(termsHLBetween, sigStars(termsHLBetween$`Pr(>Chisq)`))
+      termsHLBetween <- cbind(termsHLBetween, mmemmuris::sigStars(termsHLBetween$`Pr(>Chisq)`))
       colnames(termsHLBetween)[length(colnames(termsHLBetween))] <- ""
 
       hltBetween <- list(hlt = termsHLBetween[rownames(termsHLBetween) != "(Intercept)", ],
@@ -5235,7 +5150,7 @@ waldChi <- function(U){
                                 Chisq = U$X2Within,
                                 p.value = 1 - pchisq(U$X2Within, U$pWithin * U$qWithin))
     colnames(termsHLWithin) <- c("df", "U", "Chisq", "Pr(>Chisq)")
-    termsHLWithin <- cbind(termsHLWithin, sigStars(termsHLWithin$`Pr(>Chisq)`))
+    termsHLWithin <- cbind(termsHLWithin, mmemmuris::sigStars(termsHLWithin$`Pr(>Chisq)`))
     colnames(termsHLWithin)[length(colnames(termsHLWithin))] <- ""
 
     hltWithin <- list(hlt = termsHLWithin[rownames(termsHLWithin) != "(Intercept)", ],
@@ -5332,7 +5247,7 @@ completeData <- function(fMod){
   }else{
     N <- nrow(dataset)
     n <- nrow(na.omit(dataset))
-    reps <- ncol(coefs(fMod))
+    reps <- ncol(mmemmuris::coefs(fMod))
     complete <- (N == n)
   }
   if(!complete){
@@ -5389,7 +5304,7 @@ completeData <- function(fMod){
 #' {\code{\link[mmemmuris]{isReversible}}, \code{\link[mmemmuris]{completeData}}}
 
 BWInteracted <- function(fMod){
-  tt <- termsType(fMod)
+  tt <- mmemmuris::termsType(fMod)
   orders <- attr(terms(fMod), "order")
   names(orders) <- attr(terms(fMod), "term.labels")
   withinOrders <- orders[(names(orders) %in% tt$within) & orders == 1]
@@ -5456,7 +5371,7 @@ BWInteracted <- function(fMod){
 #' {\code{\link[mmemmuris]{completeData}}, \code{\link[mmemmuris]{BWInteracted}}}
 
 isReversible <- function(fMod){
-  if(covStruct(fMod) == "other")
+  if(mmemmuris::covStruct(fMod) == "other")
     stop("Only unstructured and compound symmetry covariances are allowed.", call. = FALSE)
   return(mmemmuris::completeData(fMod)$complete & mmemmuris::BWInteracted(fMod))
 }
@@ -5665,7 +5580,7 @@ epsilon <- function(Ematrices,
 #' {\code{\link[mmemmuris]{REMLtoML}}, \code{\link[mmemmuris]{wilksLambda}}}
 
 LRT <- function(fMod, L){
-  fModML <- REMLtoML(fMod)
+  fModML <- mmemmuris::REMLtoML(fMod)
   X <- list(model.matrix(fModML, data = na.omit(mmemmuris:::getDataset(fModML))))
   rModX <- Map(function(x, y) { mmemmuris:::colSpaceX2inColSpaceX1(x, y) }, X, L)
   formulae <- lapply(rModX, function(x){
@@ -5749,26 +5664,29 @@ LRT <- function(fMod, L){
 #' \code{\link[mmemmuris]{hlTrace}}
 
 waldF <- function(fMod, L){
-  V <- Vmatrix(fMod, full = TRUE)$V
-  X <- model.matrix(fMod, data = na.omit(mmemmuris:::getDataset(fMod)))
-  n <- length(table(nlme::getGroups(fMod)))
-  C <- MASS::ginv(t(X) %*% solve(V) %*% X)
-  B <- coefs(fMod)
-  F <- sapply(L, function(x) { (t(B) %*% t(x) %*% solve(x %*% C %*% t(x)) %*% x %*% B) / Matrix::rankMatrix(x %*% C %*% t(x)) })
-  NumDF <- sapply(L, Matrix::rankMatrix)
-  X2 <- NumDF * F
-  return(list(F = F, NumDF = NumDF, X2 = X2))
+  if(any(class(fMod) %in% c("gls", "lme"))){
+    if(any(class(fMod) %in% "lme"))
+      # Don't like this workaround but seems to work
+      fMod$fixDF$X[names(fMod$fixDF$X)] <- mmemmuris::ddfBW(fMod)$wDenDF
+    wF <- lapply(L, function(x){ anova(fMod, L = x) })
+    NumDF <- sapply(wF, function(x){ x$numDF })
+    F <- sapply(wF, function(x){ x$`F-value` })
+    X2 <- NumDF * F
+    return(list(F = F, NumDF = NumDF, X2 = X2))
+  }
+  else
+    stop('Please provide a model of class "gls" or "lme".', call. = FALSE)
 }
 
 LRT.cs <- function(fMod, rMod){
   datFull <- na.omit(mmemmuris:::getDataset(fMod))
   datRed <- na.omit(mmemmuris:::getDataset(rMod))
-  VFull <- (fMod$df.residual / nrow(datFull)) * Vmatrix(fMod)$csV
+  VFull <- (fMod$df.residual / nrow(datFull)) * mmemmuris::Vmatrix(fMod)$csV
   VFull <- as.matrix(bdiag(replicate(nrow(datFull), VFull, simplify = FALSE)))
   rFull <- cbind(c(t(residuals(fMod))))
   NFull <- nrow(datFull) * length(colnames(coef(fMod)))
   csFull <- (-1 / 2) * log(det(VFull)) - ((1 / 2) * t(rFull) %*% solve(VFull) %*% rFull) - (NFull / 2) * log(2 * pi)
-  VRed <- (rMod$df.residual / nrow(datRed)) * Vmatrix(rMod)$csV
+  VRed <- (rMod$df.residual / nrow(datRed)) * mmemmuris::Vmatrix(rMod)$csV
   VRed <- as.matrix(bdiag(replicate(nrow(datRed), VRed, simplify = FALSE)))
   rRed <- cbind(c(t(residuals(rMod))))
   NRed <- nrow(datRed) * length(colnames(coef(rMod)))
