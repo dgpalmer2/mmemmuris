@@ -3478,28 +3478,21 @@ print.nestedCovariance <- function(nestedCovariance, digits = 4){
 #' **L** \eqn{= L'}
 
 Lmatrix.ulm <- function(fMod){
-  terms <- terms(fMod)
-  tt <- mmemmuris::termsType(fMod)
-  X <- model.matrix(fMod, data = mmemmuris:::getDataset(fMod))
-  if (ncol(X) == 1L)
-    matrix(1L)
-  else
-    L <- t(as.matrix(Matrix::expand(Matrix::lu(t(X) %*% X))$L))
-  rownames(L) <- colnames(L) <- colnames(X)
-  termsIndex <- attr(X, "assign")
-  tableTerms <- table(termsIndex)
-  if(names(tableTerms)[1] == "0")
-    termsLabels <- rep(c("(Intercept)", attr(terms, "term.labels")), tableTerms)
-  else
-    termsLabels <- rep(c(attr(terms, "term.labels")), tableTerms)
-  rowIndex <- list()
-  for(i in 1:length(c(tt$between, tt$within))){
-    rowIndex[[i]] <- which(termsLabels == c(tt$between, tt$within)[i])
-    names(rowIndex)[i] <- c(tt$between, tt$within)[i]
-  }
-  return(lapply(rowIndex, function(x){
-    L[x,, drop = FALSE]
-    }))
+  if(any(class(fMod) %in% c("gls", "lme"))){
+    tt <- mmemmuris::termsType(fMod)
+    X <- model.matrix(fMod, data = mmemmuris:::getDataset(fMod))
+    if (ncol(X) == 1L)
+      matrix(1L)
+    else
+      L <- t(as.matrix(Matrix::expand(Matrix::lu(t(X) %*% X))$L))
+    rownames(L) <- colnames(L) <- colnames(X)
+    if(any(class(fMod) %in% "gls"))
+      L <- lapply(fMod$parAssign, function(x){ L[x, , drop = FALSE] })[c(tt$between, tt$within)]
+    else
+      L <- lapply(attr(fMod$fixDF, "assign"), function(x){ L[x, , drop = FALSE] })[c(tt$between, tt$within)]
+  }else
+    stop('Please provide a model of class "gls" or "lme".', call. = FALSE)
+  return(L)
 }
 
 #' Refit Model with Restricted Maximum Likelihood
@@ -4271,30 +4264,28 @@ colSpaceX2inColSpaceX1 <- function(X1, L){
 }
 
 Lmatrix.mlm <- function(fMod){
-  terms <- terms(fMod)
-  X <- model.matrix(fMod)
-  if (ncol(X) == 1L)
-    L <- matrix(1L)
-  else
-    L <- t(as.matrix(Matrix::expand(Matrix::lu(t(X) %*% X))$L))
-  rownames(L) <- colnames(L) <- colnames(X)
-  termsIndex <- attr(X, "assign")
-  tableTerms <- table(termsIndex)
-  if(names(tableTerms)[1] == "0"){
-    termsLabels <- rep(c("(Intercept)", attr(terms, "term.labels")), tableTerms)
-    term <- c("(Intercept)", attr(terms, "term.labels"))
-  }else{
-    termsLabels <- rep(c(attr(terms, "term.labels")), tableTerms)
-    term <- attr(terms, "term.labels")
-  }
-  rowIndex <- list()
-  for(i in 1:length(term)){
-    rowIndex[[i]] <- which(termsLabels == term[i])
-    names(rowIndex)[i] <- term[i]
-  }
-  return(lapply(rowIndex, function(x){
-    L[x,, drop = FALSE]
-  }))
+  if(any(class(fMod) %in% "mlm")){
+    X <- model.matrix(fMod)
+    if (ncol(X) == 1L)
+      L <- matrix(1L)
+    else
+      L <- t(as.matrix(Matrix::expand(Matrix::lu(t(X) %*% X))$L))
+    rownames(L) <- colnames(L) <- colnames(X)
+    termsIndex <- attr(X, "assign")
+    parAssign <- apply(sapply(termsIndex, function(x){
+      as.numeric(names(table(termsIndex))) == x
+    }), 1, function(x){
+      which(x)
+    })
+    if(attr(terms(fMod), "intercept") == 1L)
+      termLabels <- c("(Intercept)", attr(terms(fMod), "term.labels"))
+    else
+      termLabels <- attr(terms(fMod), "term.labels")
+    names(parAssign) <- termLabels
+    L <- lapply(parAssign, function(x){ L[x, , drop = FALSE] })
+  }else
+    stop('Please provide a model of class "mlm".', call. = FALSE)
+  return(L)
 }
 
 Vmatrix.mlm <- function(fMod, within = "Time"){

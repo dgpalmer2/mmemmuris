@@ -6,7 +6,7 @@ The pronunciation of `mmemmuris` is "memories".
 
 ## Background
 
-With the advent of linear mixed-effects models (LMM), multivariate analysis of variance (MANOVA) and repeated measures ANOVA (RM ANOVA) are falling out of popularity.  MANOVA and RM ANOVA have a few main drawbacks that deter statisticians from using it:
+With the advent of linear mixed-effects models (LMM), multivariate analysis of variance (MANOVA) and repeated measures ANOVA (RM ANOVA) are falling out of popularity.  MANOVA and RM ANOVA have a few main drawbacks that deter statisticians from using these analysis methods:
 
 1) Listwise deletion for MANOVA/RM ANOVA data in the wide format causes an entire experimental unit with at least one missing value to be dropped from the analysis.  Marginal models and LMM process the data in the long format, so instead of dropping an entire experimental unit with missing data, only the time point(s) with missing data is dropped.
 
@@ -20,11 +20,11 @@ With the advent of linear mixed-effects models (LMM), multivariate analysis of v
 
 The goals of this package are to:
 
-1) Get researchers to start becoming familiar with marginal models and LMM through their relationships with MANOVA and RM ANOVA.
+1) Help researchers to start becoming familiar with marginal models and LMM through their equivalencies with MANOVA and RM ANOVA.
 
-2) Get researchers to get comfortable enough with marginal models and LMM to use them as their new tools of choice instead of MANOVA and RM ANOVA.
+2) Help researchers to get comfortable enough with marginal models and LMM to use them as their new tools of choice instead of MANOVA and RM ANOVA.
 
-## Prequisites
+## Prerequisites
 
 I'm assuming you've analyzed data using RM ANOVA and/or MANOVA before in R (`stats` and/or `car` packages) or some other software.
 
@@ -43,17 +43,14 @@ To use this package:
         library(remotes)
         library(devtools)
 
-3) 
-
-    a. Use the `install_github` function to install my package along with its dependencies (`nlme`, `MASS`, and `Matrix` packages). 
+3a) Use the `install_github` function to install my package along with its dependencies (`nlme`, `MASS`, and `Matrix` packages).  
     
-            install_github("dgpalmer2/mmemmuris")
+        install_github("dgpalmer2/mmemmuris")
 
-    b. Alternatively, install the `knitr` and `rmarkdown` packages along with the above packages from CRAN to get access to the vignette guide on how to use my package.
+3b) Alternatively, install the `knitr` and `rmarkdown` packages along with the above packages from CRAN to get access to the vignette guide on how to use my package.
 
-
-            install_github("dgpalmer2/mmemmuris", dependencies = TRUE, build_vignettes = TRUE)
-            browseVignettes("mmemmuris")
+        install_github("dgpalmer2/mmemmuris", dependencies = TRUE, build_vignettes = TRUE)
+        browseVignettes("mmemmuris")
             
 4) Load my package.
 
@@ -96,7 +93,7 @@ This package only scratches the surface of marginal models and LMM.  It only add
 
 1) Fit different covariance structures other than unstructured and compound symmetry, and compare these covariance structures with likelihood ratio tests, AIC, and/or BIC with the `anova` function.
 
-2) Learn about multiple comparisons and contrasts with the `emmeans` package.
+2) Learn about multiple comparisons and contrasts with the `emmeans` package.  This package can be installed from CRAN.
 
 3) Try out adding continuous time variables to your model.
 
