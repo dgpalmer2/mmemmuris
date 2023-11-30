@@ -561,3 +561,87 @@ uniTest(glsMod, epsilon = "H")
 ```{r}
 uniTest(glsMod, refit = FALSE, epsilon = "H")
 ```
+
+## Type I, II, and III "Sums of Squares"
+
+**Type I**
+
+```{r}
+# Type I SS
+glsMod <- gls(logHistamine ~ Drug * Depleted * Minutes,
+              correlation =
+                corSymm(form = ~ as.numeric(Minutes) | Dog),
+              weights = varIdent(form = ~ 1 | Minutes),
+              na.action = na.omit,
+              data = dogsLong)
+hlTrace(glsMod, ss = 16)
+```
+
+**Type II**
+
+```{r}
+# Type II SS
+U <- mmemmuris:::U.ulm(glsMod, ss = 16)
+formDrug <- as.formula(logHistamine ~ Depleted + Minutes + Depleted:Minutes + 
+                       Drug:Depleted:Minutes + Drug:Depleted + Drug:Minutes + Drug)
+formDepleted <- as.formula(logHistamine ~ Drug + Minutes + Drug:Minutes + 
+                           Drug:Depleted:Minutes + Drug:Depleted + Depleted:Minutes
+                           + Depleted)
+formDrugDepleted <- as.formula(logHistamine ~ Drug * Depleted * Minutes - Drug:Depleted + Drug:Depleted)
+formMinutes <- as.formula(logHistamine ~ Drug * Depleted + Drug:Depleted:Minutes +
+                          Drug:Minutes + Depleted:Minutes + Minutes)
+formDrugMinutes <- as.formula(logHistamine ~ Drug * Depleted + Minutes + 
+                              Depleted:Minutes + Drug:Depleted:Minutes + 
+                              Drug:Minutes)
+formDrugMinutes <- as.formula(logHistamine ~ Drug * Depleted * Minutes - Drug:Minutes + Drug:Minutes)
+formDepletedMinutes <- as.formula(logHistamine ~ Drug * Depleted + Minutes + 
+                                  Drug:Minutes + Drug:Depleted:Minutes + 
+                                  Depleted:Minutes)
+
+Drug <- update(glsMod, model = formDrug)
+UDrug <- mmemmuris:::U.ulm(Drug, ss = 16)$UBetween["Drug"]
+Depleted <- update(glsMod, model = formDepleted)
+UDepleted <- mmemmuris:::U.ulm(Depleted, ss = 16)$UBetween["Depleted"]
+DrugDepleted <- update(glsMod, model = formDrugDepleted)
+UDrugDepleted <- mmemmuris:::U.ulm(DrugDepleted, ss = 16)$UBetween["Drug:Depleted"]
+
+U$UBetween[1:3] <- c(UDrug, UDepleted, UDrugDepleted)
+
+#U$UBetween <- U$sBetween <- U$pBetween <- U$qBetween <- NULL
+
+Minutes <- update(glsMod, model = formMinutes)
+UMinutes <- mmemmuris:::U.ulm(Minutes, ss = 16)$UWithin["Minutes"]
+DrugMinutes <- update(glsMod, model = formDrugMinutes)
+UDrugMinutes <- mmemmuris:::U.ulm(DrugMinutes, ss = 16)$UWithin["Drug:Minutes"]
+DepletedMinutes <- update(glsMod, model = formDepletedMinutes)
+UDepletedMinutes <- mmemmuris:::U.ulm(DepletedMinutes, 
+                                      ss = 16)$UWithin["Depleted:Minutes"]
+
+U$UWithin[1:3] <- c(UMinutes, UDrugMinutes, UDepletedMinutes)
+
+U$type <- "2"
+mmemmuris:::makeHLTrace.ulm(U)
+```
+
+**Type III**
+
+```{r}
+# Type III SS
+contrasts(dogsLong$Drug) <- contrasts(dogsLong$Depleted) <- contrasts(dogsLong$Minutes) <- contr.sum
+glsMod <- gls(logHistamine ~ Drug * Depleted * Minutes,
+              correlation =
+                corSymm(form = ~ as.numeric(Minutes) | Dog),
+              weights = varIdent(form = ~ 1 | Minutes),
+              na.action = na.omit,
+              data = dogsLong)
+
+U <- mmemmuris:::U.ulm(glsMod, ss = 16)
+U$UBetween <- U$sBetween <- U$pBetween <- U$qBetween <- NULL
+typeIII <- anova(glsMod, type = "marginal")
+typeIII$X2 <- typeIII$numDF * typeIII$`F-value`
+typeIII$U <- typeIII$X2 / U$v
+
+U$UWithin[1:4] <- typeIII$U[-c(1:3, 5)]
+U$type <- "3"
+mmemmuris:::makeHLTrace.ulm(U)
+```

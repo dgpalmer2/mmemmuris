@@ -3835,8 +3835,14 @@ Hmatrix.mlm <- function(fMod, within = "Time"){
   H <- lapply(Lbetween, function(x){
     t(M) %*% (t(B) %*% t(x)) %*% solve(x %*% MASS::ginv(t(X) %*% X) %*% t(x)) %*% x %*% (B) %*% M
   })
-  names(H) <- paste(names(H), within, sep = ":")
-  names(H) <- gsub("\\(Intercept\\):", "", names(H))
+
+  if(length(Lbetween) == 1L){
+    names(HB) <- "(Intercept)"
+    names(H) <- within
+  }else{
+    names(H) <- paste(names(H), within, sep = ":")
+    names(H) <- gsub("\\(Intercept\\):", "", names(H))
+  }
 
   SSH <- sapply(H, function(x){
     sum(diag(x %*% solve(t(M) %*% M)))
@@ -4266,8 +4272,11 @@ colSpaceX2inColSpaceX1 <- function(X1, L){
 Lmatrix.mlm <- function(fMod){
   if(any(class(fMod) %in% "mlm")){
     X <- model.matrix(fMod)
-    if (ncol(X) == 1L)
+    if (ncol(X) == 1L){
       L <- matrix(1L)
+      rownames(L) <- colnames(L) <- "(Intercept)"
+      return(L)
+    }
     else
       L <- t(as.matrix(Matrix::expand(Matrix::lu(t(X) %*% X))$L))
     rownames(L) <- colnames(L) <- colnames(X)
