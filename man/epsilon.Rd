@@ -4,7 +4,11 @@
 \alias{epsilon}
 \title{Epsilon Corrections for a Departure from Sphericity}
 \usage{
-epsilon(Ematrices, method = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre"))
+epsilon(
+  Ematrices,
+  method = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre"),
+  tolerance = .Machine$double.eps
+)
 }
 \arguments{
 \item{Ematrices}{An object of class \code{Ematrix.ulm} or \code{Ematrix.mlm}.}
@@ -54,7 +58,7 @@ adjustments for violations of sphericity.
 
 The Greenhouse-Geisser epsilon is calculated as
 
-\eqn{\epsilon_{GG} = ((\Sigma\lambda_i of} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) ^ 2) / (r - 1)(\Sigma\lambda_i ^ 2 of} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1})}
+\eqn{\epsilon_{GG} = ((\Sigma\lambda_i \text{ of }} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) ^ 2) / (r - 1)(\Sigma\lambda_i ^ 2 \text{ of }} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1})}
 
 The Huynh-Feldt-Lecoutre epsilon is calculated as
 

@@ -53,7 +53,7 @@ effects, \strong{r} is the vector of model residuals, and \eqn{N} is the number 
 observations of data in the long format.
 
 The likelihood ratio (LR) statistic approximately follows a \eqn{\chi ^ 2}
-distribution \deqn{LR = -2logLik(M_R) - {-2logLik(M_F)}} with
+distribution \deqn{LR = -2logLik(M_R) - \{-2logLik(M_F)\}} with
 \eqn{df_{M_R} - df_{M_F}} degrees of freedom.
 }
 \examples{

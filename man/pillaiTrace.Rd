@@ -10,7 +10,8 @@ pillaiTrace(
   approximation = c("Muller", "Pillai"),
   within = "Time",
   LR = TRUE,
-  ss = NULL
+  ss = NULL,
+  tolerance = .Machine$double.eps
 )
 }
 \arguments{
@@ -31,6 +32,12 @@ The default is "Time".}
 \item{LR}{Likelihood ratio tests are used to calculate the likelihood ratio
 \eqn{\chi ^ 2} and Wilks' \eqn{\Lambda} statistics instead of the \strong{H} and
 \strong{E} matrices.}
+
+\item{ss}{The sample size of the dataset.  If \code{NULL}, refer to \code{\link[mmemmuris]{completeData}}
+for calculation of the sample size.  Otherwise, use with care.}
+
+\item{tolerance}{Threshold for detecting columns that are linearly dependent.
+Use with care.}
 }
 \value{
 This function will return two lists: a within-subject effects list
@@ -129,7 +136,7 @@ effects, \strong{r} is the vector of model residuals, and \eqn{N} is the number 
 observations of data in the long format.
 
 Wilks' \eqn{\Lambda} is denoted as
-\deqn{\Lambda = exp{(-[-2logLik(M_R) - {-2logLik(M_F)}]) / n}}
+\deqn{\Lambda = exp{(-[-2logLik(M_R) - \{-2logLik(M_F)\}]) / n}}
 where \eqn{n} is the number of subjects.
 
 For marginal and mixed-effects models, if \eqn{s = min(p, q) = 1}, Pillai's

@@ -38,7 +38,7 @@ and \strong{X} is the design matrix of the independent variables.
 
 The denominator degrees of freedom are equal to
 
-\eqn{ddfBetween = n - rank(}\strong{X_b} \eqn{)}
+\eqn{ddf_{Between} = n - rank(}\strong{X_b} \eqn{)}
 
 where \eqn{n} is the total number of observations of data in the wide format
 and \strong{X_b} is the design matrix of the between-subject independent
@@ -46,7 +46,7 @@ variables in the wide format
 
 for between-subject effects and
 
-\eqn{ddfWithin = ddf - ddfBetween}
+\eqn{ddf_{Within} = ddf - ddf_{Between}}
 
 for within-subject effects.
 }

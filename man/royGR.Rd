@@ -4,7 +4,14 @@
 \alias{royGR}
 \title{Multivariate Tests: Roy's Greatest Root}
 \usage{
-royGR(fMod, individual = NULL, within = "Time", waldF = TRUE, ss = NULL)
+royGR(
+  fMod,
+  individual = NULL,
+  within = "Time",
+  waldF = TRUE,
+  ss = NULL,
+  tolerance = .Machine$double.eps
+)
 }
 \arguments{
 \item{fMod}{A model of class \code{\link[nlme]{gls}} or \code{\link[nlme]{lme}}.}
@@ -20,6 +27,12 @@ The default is "Time".}
 
 \item{waldF}{Wald F-tests are used to calculate the Wald \eqn{\chi ^ 2} and
 Hotelling-Lawley trace statistics instead of the \strong{H} and \strong{E} matrices.}
+
+\item{ss}{The sample size of the dataset.  If \code{NULL}, refer to \code{\link[mmemmuris]{completeData}}
+for calculation of the sample size.  Otherwise, use with care.}
+
+\item{tolerance}{Threshold for detecting columns that are linearly dependent.
+Use with care.}
 }
 \value{
 This function will return two lists: a within-subject effects list
@@ -57,7 +70,7 @@ mixed-effects models, and multivariate linear models.
 \details{
 The Roy's greatest root statistic for RM ANOVA is calculated as
 
-\eqn{\Theta = max(\lambda_i)} of \strong{E}\eqn{ ^ {-1}}\strong{H}
+\eqn{\Theta = max(\lambda_i) \text{ of }} \strong{E}\eqn{ ^ {-1}}\strong{H}
 
 where the SSCP error matrix is
 

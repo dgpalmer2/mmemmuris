@@ -10,7 +10,8 @@ uniTest(
   within = "Time",
   epsilon = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre"),
   refit = TRUE,
-  ss = NULL
+  ss = NULL,
+  tolerance = .Machine$double.eps
 )
 }
 \arguments{
@@ -31,6 +32,12 @@ The default is "Time".}
 \item{refit}{The marginal or mixed-effects model is refit with a compound symmetry
 covariance structure instead of calculating the statistics with the \strong{H} and
 \strong{E} matrices.}
+
+\item{ss}{The sample size of the dataset.  If \code{NULL}, refer to \code{\link[mmemmuris]{completeData}}
+for calculation of the sample size.  Otherwise, use with care.}
+
+\item{tolerance}{Threshold for detecting columns that are linearly dependent.
+Use with care.}
 }
 \value{
 \tabular{ll}{
@@ -71,7 +78,7 @@ sphericity.
 In RM ANOVA, there are within-subject effects and (optionally) between-subject
 effects.  An ANOVA can be done on a transformed dependent variable denoted as
 
-\deqn{\Sigma(Y_i) / \sqrt r  for i = 1, \dots, r}
+\deqn{\Sigma(Y_i) / \sqrt r  \text{ for } i = 1, \dots, r}
 
 where the numerator is the sum of the repeated measures responses for each
 subject and the denominator is the square root of the number of repeated
@@ -149,7 +156,7 @@ itself.
 
 The Greenhouse-Geisser epsilon is calculated as
 
-\eqn{\epsilon_{GG} = ((\Sigma\lambda_i of} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) ^ 2) / (r - 1)(\Sigma\lambda_i ^ 2 of} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1})}
+\eqn{\epsilon_{GG} = ((\Sigma\lambda_i \text{ of }} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) ^ 2) / (r - 1)(\Sigma\lambda_i ^ 2 \text{ of }} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1})}
 
 The Huynh-Feldt-Lecoutre epsilon is calculated as
 
@@ -157,7 +164,7 @@ The Huynh-Feldt-Lecoutre epsilon is calculated as
 
 Mauchly's test for sphericity is calculated for within-subject effects as
 
-\eqn{W = (\Pi\lambda_i of} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) / (((\Sigma\lambda_i of} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) / (r - 1)) ^ (r - 1))}
+\eqn{W = (\Pi\lambda_i \text{ of }} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) / (((\Sigma\lambda_i \text{ of }} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) / (r - 1)) ^ {(r - 1)})}
 
 Let \eqn{r} be equal to the number of repeated measurements, \eqn{v}
 be the residual degrees of freedom (between-subject design matrix), and the correction factor equal

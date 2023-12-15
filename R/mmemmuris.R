@@ -75,11 +75,12 @@ termsType <- function(fMod){
 }
 
 uniTest.mlm <- function(fMod, within = "Time",
-                        epsilon = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre")){
+                        epsilon = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre"),
+                        tolerance = .Machine$double.eps){
   epsilon <- match.arg(epsilon)
   Esingular <- FALSE
   Ematrices <- mmemmuris:::Ematrix.mlm(fMod)
-  if(is.null(mmemmuris:::inverseMatrix(Ematrices$E)))
+  if(is.null(mmemmuris:::inverseMatrix(Ematrices$E, tolerance = tolerance)))
     Esingular <- TRUE
   if(Esingular)
     stop("The SSCP E matrix is singular.  Univariate tests not available.", call. = FALSE)
@@ -186,7 +187,9 @@ uniTest.mlm <- function(fMod, within = "Time",
   return(uniTest)
 }
 
-uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre"), refit = TRUE, ss = NULL){
+uniTest.ulm <- function(fMod, individual = NULL,
+                        epsilon = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre"),
+                        refit = TRUE, ss = NULL, tolerance = .Machine$double.eps){
   epsilon <- match.arg(epsilon)
   ddf <- "between-within"
   type <- "1"
@@ -198,7 +201,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
   Ematrices <- mmemmuris:::Ematrix.ulm(fMod, individual, ss)
   unV <- Ematrices$Vmatrix
   E <- Ematrices$E
-  if(is.null(mmemmuris:::inverseMatrix(E)))
+  if(is.null(mmemmuris:::inverseMatrix(E, tolerance = tolerance)))
     Esingular <- TRUE
   M <- Ematrices$M
   n <- Ematrices$n
@@ -439,7 +442,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
 #' In RM ANOVA, there are within-subject effects and (optionally) between-subject
 #' effects.  An ANOVA can be done on a transformed dependent variable denoted as
 #'
-#' \deqn{\Sigma(Y_i) / \sqrt r  for i = 1, \dots, r}
+#' \deqn{\Sigma(Y_i) / \sqrt r  \text{ for } i = 1, \dots, r}
 #'
 #' where the numerator is the sum of the repeated measures responses for each
 #' subject and the denominator is the square root of the number of repeated
@@ -517,7 +520,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
 #'
 #' The Greenhouse-Geisser epsilon is calculated as
 #'
-#' \eqn{\epsilon_{GG} = ((\Sigma\lambda_i of} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) ^ 2) / (r - 1)(\Sigma\lambda_i ^ 2 of} **E**\eqn{(}**M'M**\eqn{) ^ {-1})}
+#' \eqn{\epsilon_{GG} = ((\Sigma\lambda_i \text{ of }} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) ^ 2) / (r - 1)(\Sigma\lambda_i ^ 2 \text{ of }} **E**\eqn{(}**M'M**\eqn{) ^ {-1})}
 #'
 #' The Huynh-Feldt-Lecoutre epsilon is calculated as
 #'
@@ -525,7 +528,7 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
 #'
 #' Mauchly's test for sphericity is calculated for within-subject effects as
 #'
-#' \eqn{W = (\Pi\lambda_i of} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) / (((\Sigma\lambda_i of} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) / (r - 1)) ^ (r - 1))}
+#' \eqn{W = (\Pi\lambda_i \text{ of }} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) / (((\Sigma\lambda_i \text{ of }} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) / (r - 1)) ^ {(r - 1)})}
 #'
 #' Let \eqn{r} be equal to the number of repeated measurements, \eqn{v}
 #' be the residual degrees of freedom (between-subject design matrix), and the correction factor equal
@@ -546,6 +549,10 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
 #' @param refit The marginal or mixed-effects model is refit with a compound symmetry
 #' covariance structure instead of calculating the statistics with the **H** and
 #' **E** matrices.
+#' @param ss The sample size of the dataset.  If `NULL`, refer to \code{\link[mmemmuris]{completeData}}
+#' for calculation of the sample size.  Otherwise, use with care.
+#' @param tolerance Threshold for detecting columns that are linearly dependent.
+#' Use with care.
 #'
 #' @references {\url{https://www.lesahoffman.com/PSYC943/mv12psyc943_lecture13.pdf}}
 #' @references {\url{https://go.documentation.sas.com/doc/en/pgmsascdc/9.4_3.3/statug/statug_glm_details46.htm}}
@@ -605,22 +612,22 @@ uniTest.ulm <- function(fMod, individual = NULL, epsilon = c("Greenhouse-Geisser
 #' @seealso
 #' {\code{\link[mmemmuris]{Hmatrix}}, \code{\link[mmemmuris]{coefs}}, \code{\link[mmemmuris]{Vmatrix}}, \code{\link[mmemmuris]{Ematrix}}, \code{\link[mmemmuris]{waldF}}, \code{\link[mmemmuris]{sphericityTests}}, \code{\link[mmemmuris]{epsilon}}, \code{\link[mmemmuris]{ddfResidual}}, \code{\link[mmemmuris]{ddfBW}}}
 
-uniTest <- function(fMod, individual = NULL, within = "Time", epsilon = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre"), refit = TRUE, ss = NULL){
+uniTest <- function(fMod, individual = NULL, within = "Time", epsilon = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre"), refit = TRUE, ss = NULL, tolerance = .Machine$double.eps){
   if(any(class(fMod) %in% c("gls", "lme"))){
     epsilon <- match.arg(epsilon)
-    uniTests <- mmemmuris:::uniTest.ulm(fMod, individual, epsilon, refit, ss)
+    uniTests <- mmemmuris:::uniTest.ulm(fMod, individual, epsilon, refit, ss, tolerance)
   }else if(any(class(fMod) %in% "mlm")){
     epsilon <- match.arg(epsilon)
-    uniTests <- mmemmuris:::uniTest.mlm(fMod, within, epsilon)
+    uniTests <- mmemmuris:::uniTest.mlm(fMod, within, epsilon, tolerance)
   }else
     stop('Please provide a model of class "gls", "lme", or "mlm".', call. = FALSE)
   return(uniTests)
 }
 
-wilksLambda.ulm <- function(fMod, individual = NULL, approximation = c("Rao", "Bartlett", "LR"), LR = TRUE, ss = NULL){
+wilksLambda.ulm <- function(fMod, individual = NULL, approximation = c("Rao", "Bartlett", "LR"), LR = TRUE, ss = NULL, tolerance = .Machine$double.eps){
   approximation <- match.arg(approximation)
   tt <- mmemmuris::termsType(fMod)
-  wilks <- mmemmuris:::lambda.ulm(fMod, individual, LR = LR, ss = ss)
+  wilks <- mmemmuris:::lambda.ulm(fMod, individual, LR = LR, ss = ss, tolerance = tolerance)
 
   if(approximation == "Rao"){
     raoFApprox <- mmemmuris:::raoF(wilks)
@@ -676,9 +683,9 @@ wilksLambda.ulm <- function(fMod, individual = NULL, approximation = c("Rao", "B
   }
 }
 
-wilksLambda.mlm <- function(fMod, approximation = c("Rao", "Bartlett", "LR"), within = "Time"){
+wilksLambda.mlm <- function(fMod, approximation = c("Rao", "Bartlett", "LR"), within = "Time", tolerance = .Machine$double.eps){
   approximation <- match.arg(approximation)
-  wilks <- mmemmuris:::lambda.mlm(fMod, within)
+  wilks <- mmemmuris:::lambda.mlm(fMod, within, tolerance)
 
   if(approximation == "Rao"){
     raoFApprox <- mmemmuris:::raoF(wilks)
@@ -804,11 +811,11 @@ wilksLambda.mlm <- function(fMod, approximation = c("Rao", "Bartlett", "LR"), wi
 #' observations of data in the long format.
 #'
 #' Wilks' \eqn{\Lambda} is denoted as
-#' \deqn{\Lambda = exp{(-[-2logLik(M_R) - {-2logLik(M_F)}]) / n}}
+#' \deqn{\Lambda = exp{(-[-2logLik(M_R) - \{-2logLik(M_F)\}]) / n}}
 #' where \eqn{n} is the number of subjects.
 #'
 #' The likelihood ratio (LR) statistic approximately follows a \eqn{\chi ^ 2}
-#' distribution \deqn{LR = -2logLik(M_R) - {-2logLik(M_F)}} with
+#' distribution \deqn{LR = -2logLik(M_R) - \{-2logLik(M_F)\}} with
 #' \eqn{df_{M_R} - df_{M_F}} degrees of freedom.
 #'
 #' **Rao**
@@ -847,6 +854,10 @@ wilksLambda.mlm <- function(fMod, approximation = c("Rao", "Bartlett", "LR"), wi
 #' @param LR Likelihood ratio tests are used to calculate the likelihood ratio
 #' \eqn{\chi ^ 2} and Wilks' \eqn{\Lambda} statistics instead of the **H** and
 #' **E** matrices for marginal and mixed-effects models.
+#' @param ss The sample size of the dataset.  If `NULL`, refer to \code{\link[mmemmuris]{completeData}}
+#' for calculation of the sample size.  Otherwise, use with care.
+#' @param tolerance Threshold for detecting columns that are linearly dependent.
+#' Use with care.
 #'
 #' @references {\url{https://support.sas.com/resources/papers/proceedings/proceedings/sugi23/Stats/p229.pdf}}
 #' @references {\url{https://documentation.sas.com/doc/en/pgmsascdc/9.4_3.4/statug/statug_introreg_sect038.htm}}
@@ -930,22 +941,26 @@ wilksLambda.mlm <- function(fMod, approximation = c("Rao", "Bartlett", "LR"), wi
 #' {\code{\link[mmemmuris]{Hmatrix}}, \code{\link[mmemmuris]{coefs}}, \code{\link[mmemmuris]{Vmatrix}}, \code{\link[mmemmuris]{Ematrix}}, \code{\link[mmemmuris]{REMLtoML}}, \code{\link[mmemmuris]{LRT}}}
 
 wilksLambda <- function(fMod, individual = NULL, approximation = c("Rao", "Bartlett", "LR"),
-                        within = "Time", LR = TRUE, ss = NULL){
+                        within = "Time", LR = TRUE, ss = NULL, tolerance = .Machine$double.eps){
   if(any(class(fMod) %in% c("gls", "lme"))){
-    wilks <- mmemmuris:::wilksLambda.ulm(fMod, individual, approximation, LR = LR, ss = ss)
+    wilks <- mmemmuris:::wilksLambda.ulm(fMod, individual, approximation, LR = LR, ss = ss, tolerance = tolerance)
     return(wilks)
   }else if(any(class(fMod) %in% "mlm")){
-    wilks <- mmemmuris:::wilksLambda.mlm(fMod, approximation, within)
+    wilks <- mmemmuris:::wilksLambda.mlm(fMod, approximation, within, tolerance)
     return(wilks)
   }else
     stop('Please provide a model of class "gls", "lme", or "mlm".', call. = FALSE)
 }
 
-lambda.mlm <- function(fMod, within = "Time"){
+lambda.mlm <- function(fMod, within = "Time", tolerance = .Machine$double.eps){
   type <- "1"
   E <- mmemmuris:::Ematrix.mlm(fMod)
   n <- E$n
   H <- mmemmuris:::Hmatrix.mlm(fMod, within)
+  if(any(sapply(H$HB, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$EB, tolerance = tolerance)) })))
+    stop("det(HB + EB) = 0.", call. = FALSE)
+  if(any(sapply(H$H, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$E, tolerance = tolerance)) })))
+    stop("det(H + E) = 0.", call. = FALSE)
 
   # Calculate Wilks' lambda statistic
   lambdaBetween <- sapply(H$HB, function(x){
@@ -994,7 +1009,8 @@ lambda.mlm <- function(fMod, within = "Time"){
   return(lambda)
 }
 
-lambda.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
+lambda.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL,
+                       tolerance = .Machine$double.eps){
   type <- "1"
   if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
     stop("Only unstructured covariance models are allowed.", call. = FALSE)
@@ -1003,13 +1019,13 @@ lambda.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
   E <- mmemmuris:::Ematrix.ulm(fMod, individual, ss)
   H <- mmemmuris:::Hmatrix.ulm(fMod)
   n <- E$n
-  if("error" %in% class(tryCatch(any(sapply(H$HB, function(x){ mmemmuris:::determinantMatrix(x + E$EB) == 0L })), error = function(e) { e })))
+  if("error" %in% class(tryCatch(sapply(H$HB, function(x){ x + E$EB }), error = function(e) { e })))
     stop('Please pick a different E matrix with the "individual" argument.', call. = FALSE)
-  if("error" %in% class(tryCatch(any(sapply(H$H, function(x){ mmemmuris:::determinantMatrix(x + E$E) == 0L })), error = function(e) { e })))
+  if("error" %in% class(tryCatch(sapply(H$H, function(x){ x + E$E }), error = function(e) { e })))
     stop('Please pick a different E matrix with the "individual" argument.', call. = FALSE)
-  if(any(sapply(H$HB, function(x){ mmemmuris:::determinantMatrix(x + E$EB) == 0L })))
+  if(any(sapply(H$HB, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$EB, tolerance = tolerance)) })))
     HBsingular <- TRUE
-  if(any(sapply(H$H, function(x){ mmemmuris:::determinantMatrix(x + E$E) == 0L })))
+  if(any(sapply(H$H, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$E, tolerance = tolerance)) })))
     Hsingular <- TRUE
   if(HBsingular == TRUE | Hsingular == TRUE){
     LR <- TRUE
@@ -1131,11 +1147,15 @@ lambda.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
   return(lambda)
 }
 
-V.mlm <- function(fMod, within = "Time"){
+V.mlm <- function(fMod, within = "Time", tolerance = .Machine$double.eps){
   type <- "1"
   E <- mmemmuris:::Ematrix.mlm(fMod)
   n <- E$n
   H <- mmemmuris:::Hmatrix.mlm(fMod, within)
+  if(any(sapply(H$HB, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$EB, tolerance = tolerance)) })))
+    stop("(HB + EB) ^ {-1} is singular.", call. = FALSE)
+  if(any(sapply(H$H, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$E, tolerance = tolerance)) })))
+    stop("(H + E) ^ {-1} is singular.", call. = FALSE)
 
   # Calculate Pillai's trace statistic
   VBetween <- sapply(H$HB, function(x){
@@ -1181,7 +1201,8 @@ V.mlm <- function(fMod, within = "Time"){
   return(V)
 }
 
-V.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
+V.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL,
+                  tolerance = .Machine$double.eps){
   type <- "1"
   if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
     stop("Only unstructured covariance models are allowed.", call. = FALSE)
@@ -1190,13 +1211,13 @@ V.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
   E <- mmemmuris:::Ematrix.ulm(fMod, individual, ss)
   H <- mmemmuris:::Hmatrix.ulm(fMod)
   n <- E$n
-  if("error" %in% class(tryCatch(any(sapply(H$HB, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$EB)) })), error = function(e) { e })))
+  if("error" %in% class(tryCatch(sapply(H$HB, function(x){ x + E$EB }), error = function(e) { e })))
     stop('Please pick a different E matrix with the "individual" argument.', call. = FALSE)
-  if("error" %in% class(tryCatch(any(sapply(H$H, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$E)) })), error = function(e) { e })))
+  if("error" %in% class(tryCatch(sapply(H$H, function(x){ x + E$E }), error = function(e) { e })))
     stop('Please pick a different E matrix with the "individual" argument.', call. = FALSE)
-  if(any(sapply(H$HB, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$EB)) })))
+  if(any(sapply(H$HB, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$EB, tolerance = tolerance)) })))
     HBsingular <- TRUE
-  if(any(sapply(H$H, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$E)) })))
+  if(any(sapply(H$H, function(x){ is.null(mmemmuris:::inverseMatrix(x + E$E, tolerance = tolerance)) })))
     Hsingular <- TRUE
   if(HBsingular == TRUE | Hsingular == TRUE){
     LR <- TRUE
@@ -1316,10 +1337,10 @@ V.ulm <- function(fMod, individual = NULL, LR = TRUE, ss = NULL){
   return(V)
 }
 
-pillaiTrace.mlm <- function(fMod, approximation = c("Muller", "Pillai"), within = "Time"){
+pillaiTrace.mlm <- function(fMod, approximation = c("Muller", "Pillai"), within = "Time", tolerance = .Machine$double.eps){
 
   approximation <- match.arg(approximation)
-  V <- mmemmuris:::V.mlm(fMod, within)
+  V <- mmemmuris:::V.mlm(fMod, within, tolerance)
 
   if(approximation == "Muller"){
     mullerFApprox <- mmemmuris:::mullerF(V)
@@ -1358,10 +1379,10 @@ pillaiTrace.mlm <- function(fMod, approximation = c("Muller", "Pillai"), within 
   }
 }
 
-pillaiTrace.ulm <- function(fMod, individual = NULL, approximation = c("Muller", "Pillai"), LR = TRUE, ss = NULL){
+pillaiTrace.ulm <- function(fMod, individual = NULL, approximation = c("Muller", "Pillai"), LR = TRUE, ss = NULL, tolerance = .Machine$double.eps){
   approximation <- match.arg(approximation)
   tt <- mmemmuris::termsType(fMod)
-  V <- mmemmuris:::V.ulm(fMod, individual, LR = LR, ss = ss)
+  V <- mmemmuris:::V.ulm(fMod, individual, LR = LR, ss = ss, tolerance = tolerance)
 
   if(approximation == "Muller"){
     mullerFApprox <- mmemmuris:::mullerF(V)
@@ -1481,7 +1502,7 @@ pillaiTrace.ulm <- function(fMod, individual = NULL, approximation = c("Muller",
 #' observations of data in the long format.
 #'
 #' Wilks' \eqn{\Lambda} is denoted as
-#' \deqn{\Lambda = exp{(-[-2logLik(M_R) - {-2logLik(M_F)}]) / n}}
+#' \deqn{\Lambda = exp{(-[-2logLik(M_R) - \{-2logLik(M_F)\}]) / n}}
 #' where \eqn{n} is the number of subjects.
 #'
 #' For marginal and mixed-effects models, if \eqn{s = min(p, q) = 1}, Pillai's
@@ -1525,6 +1546,10 @@ pillaiTrace.ulm <- function(fMod, individual = NULL, approximation = c("Muller",
 #' @param LR Likelihood ratio tests are used to calculate the likelihood ratio
 #' \eqn{\chi ^ 2} and Wilks' \eqn{\Lambda} statistics instead of the **H** and
 #' **E** matrices.
+#' @param ss The sample size of the dataset.  If `NULL`, refer to \code{\link[mmemmuris]{completeData}}
+#' for calculation of the sample size.  Otherwise, use with care.
+#' @param tolerance Threshold for detecting columns that are linearly dependent.
+#' Use with care.
 #'
 #' @returns
 #' This function will return two lists: a within-subject effects list
@@ -1594,23 +1619,27 @@ pillaiTrace.ulm <- function(fMod, individual = NULL, approximation = c("Muller",
 #' {\code{\link[mmemmuris]{Hmatrix}}, \code{\link[mmemmuris]{coefs}}, \code{\link[mmemmuris]{Vmatrix}}, \code{\link[mmemmuris]{Ematrix}}, \code{\link[mmemmuris]{REMLtoML}}, \code{\link[mmemmuris]{LRT}}}
 
 pillaiTrace <- function(fMod, individual = NULL,
-                        approximation = c("Muller", "Pillai"), within = "Time", LR = TRUE, ss = NULL){
+                        approximation = c("Muller", "Pillai"), within = "Time", LR = TRUE, ss = NULL, tolerance = .Machine$double.eps){
   approximation <- match.arg(approximation)
   if(any(class(fMod) %in% c("gls", "lme"))){
-    pillai <- mmemmuris:::pillaiTrace.ulm(fMod, individual, approximation, LR = LR, ss = ss)
+    pillai <- mmemmuris:::pillaiTrace.ulm(fMod, individual, approximation, LR = LR, ss = ss, tolerance = tolerance)
     return(pillai)
   }else if(any(class(fMod) %in% "mlm")){
-    pillai <- mmemmuris:::pillaiTrace.mlm(fMod, approximation, within)
+    pillai <- mmemmuris:::pillaiTrace.mlm(fMod, approximation, within, tolerance)
     return(pillai)
   }else
     stop('Please provide a model of class "gls", "lme", or "mlm".', call. = FALSE)
 }
 
-U.mlm <- function(fMod, within = "Time"){
+U.mlm <- function(fMod, within = "Time", tolerance = .Machine$double.eps){
   type <- "1"
   E <- mmemmuris:::Ematrix.mlm(fMod)
   n <- E$n
   H <- mmemmuris:::Hmatrix.mlm(fMod, within)
+  if(is.null(mmemmuris:::inverseMatrix(E$EB, tolerance = tolerance)))
+    stop("EB ^ {-1} is singular.", call. = FALSE)
+  if(is.null(mmemmuris:::inverseMatrix(E$E, tolerance = tolerance)))
+    stop("E ^ {-1} is singular.", call. = FALSE)
 
   # Calculate Hotelling-Lawley trace statistic
   UBetween <- sapply(H$HB, function(x){
@@ -1659,7 +1688,8 @@ U.mlm <- function(fMod, within = "Time"){
   return(U)
 }
 
-U.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
+U.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL,
+                  tolerance = .Machine$double.eps){
   type <- "1"
   if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
     stop("Only unstructured covariance models are allowed.", call. = FALSE)
@@ -1668,13 +1698,13 @@ U.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
   E <- mmemmuris:::Ematrix.ulm(fMod, individual, ss)
   H <- mmemmuris:::Hmatrix.ulm(fMod)
   n <- E$n
-  if("error" %in% class(tryCatch(any(sapply(H$HB, function(x){ Matrix::rankMatrix(x + E$EB) })), error = function(e) { e })))
+  if("error" %in% class(tryCatch(sapply(H$HB, function(x){ x + E$EB }), error = function(e) { e })))
     stop('Please pick a different E matrix with the "individual" argument.', call. = FALSE)
-  if("error" %in% class(tryCatch(any(sapply(H$H, function(x){ Matrix::rankMatrix(x + E$E) })), error = function(e) { e })))
+  if("error" %in% class(tryCatch(sapply(H$H, function(x){ x + E$E }), error = function(e) { e })))
     stop('Please pick a different E matrix with the "individual" argument.', call. = FALSE)
-  if(is.null(mmemmuris:::inverseMatrix(E$EB)))
+  if(is.null(mmemmuris:::inverseMatrix(E$EB, tolerance = tolerance)))
     EBsingular <- TRUE
-  if(is.null(mmemmuris:::inverseMatrix(E$E)))
+  if(is.null(mmemmuris:::inverseMatrix(E$E, tolerance = tolerance)))
     Esingular <- TRUE
   if(EBsingular == TRUE | Esingular == TRUE){
     waldF <- TRUE
@@ -1895,6 +1925,10 @@ U.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
 #' The default is "Time".
 #' @param waldF Wald F-tests are used to calculate the Wald \eqn{\chi ^ 2} and
 #' Hotelling-Lawley trace statistics instead of the **H** and **E** matrices.
+#' @param ss The sample size of the dataset.  If `NULL`, refer to \code{\link[mmemmuris]{completeData}}
+#' for calculation of the sample size.  Otherwise, use with care.
+#' @param tolerance Threshold for detecting columns that are linearly dependent.
+#' Use with care.
 #'
 #' @references {\url{https://support.sas.com/resources/papers/proceedings/proceedings/sugi23/Stats/p229.pdf}}
 #' @references {\url{https://documentation.sas.com/doc/en/pgmsascdc/9.4_3.4/statug/statug_introreg_sect038.htm}}
@@ -1980,22 +2014,22 @@ U.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
 #' {\code{\link[mmemmuris]{Hmatrix}}, \code{\link[mmemmuris]{coefs}}, \code{\link[mmemmuris]{Vmatrix}}, \code{\link[mmemmuris]{Ematrix}}, \code{\link[mmemmuris]{waldF}}, \code{\link[mmemmuris]{MLtoREML}}}
 
 hlTrace <- function(fMod, individual = NULL, approximation = c("McKeon", "Pillai-Samson", "Wald"),
-                        within = "Time", waldF = TRUE, ss = NULL){
+                        within = "Time", waldF = TRUE, ss = NULL, tolerance = .Machine$double.eps){
   approximation <- match.arg(approximation)
   if(any(class(fMod) %in% c("gls", "lme"))){
-    hlt <- mmemmuris:::hlTrace.ulm(fMod, individual, approximation, waldF = waldF, ss = ss)
+    hlt <- mmemmuris:::hlTrace.ulm(fMod, individual, approximation, waldF = waldF, ss = ss, tolerance = tolerance)
     return(hlt)
   }else if(any(class(fMod) %in% "mlm")){
-    hlt <- mmemmuris:::hlTrace.mlm(fMod, approximation, within)
+    hlt <- mmemmuris:::hlTrace.mlm(fMod, approximation, within, tolerance)
     return(hlt)
   }else
     stop('Please provide a model of class "gls", "lme", or "mlm".', call. = FALSE)
 }
 
-hlTrace.ulm <- function(fMod, individual = NULL, approximation = c("McKeon", "Pillai-Samson", "Wald"), waldF = TRUE, ss = NULL){
+hlTrace.ulm <- function(fMod, individual = NULL, approximation = c("McKeon", "Pillai-Samson", "Wald"), waldF = TRUE, ss = NULL, tolerance = .Machine$double.eps){
   approximation <- match.arg(approximation)
   tt <- mmemmuris::termsType(fMod)
-  hlt <- mmemmuris:::U.ulm(fMod, individual, waldF = waldF, ss = ss)
+  hlt <- mmemmuris:::U.ulm(fMod, individual, waldF = waldF, ss = ss, tolerance = tolerance)
 
   if(approximation == "McKeon"){
     mckeonFApprox <- mmemmuris:::mckeonF(hlt)
@@ -2055,9 +2089,9 @@ hlTrace.ulm <- function(fMod, individual = NULL, approximation = c("McKeon", "Pi
 }
 
 hlTrace.mlm <- function(fMod, approximation = c("McKeon", "Pillai-Samson", "Wald"),
-                        within = "Time"){
+                        within = "Time", tolerance = .Machine$double.eps){
   approximation <- match.arg(approximation)
-  hlt <- mmemmuris:::U.mlm(fMod, within)
+  hlt <- mmemmuris:::U.mlm(fMod, within, tolerance)
 
   if(approximation == "McKeon"){
     mckeonFApprox <- mmemmuris:::mckeonF(hlt)
@@ -2185,7 +2219,7 @@ makeHLTrace.ulm <- function(U, approximation = c("McKeon", "Pillai-Samson", "Wal
 #'
 #' The Roy's greatest root statistic for RM ANOVA is calculated as
 #'
-#' \eqn{\Theta = max(\lambda_i)} of **E**\eqn{ ^ {-1}}**H**
+#' \eqn{\Theta = max(\lambda_i) \text{ of }} **E**\eqn{ ^ {-1}}**H**
 #'
 #' where the SSCP error matrix is
 #'
@@ -2258,6 +2292,10 @@ makeHLTrace.ulm <- function(U, approximation = c("McKeon", "Pillai-Samson", "Wal
 #' The default is "Time".
 #' @param waldF Wald F-tests are used to calculate the Wald \eqn{\chi ^ 2} and
 #' Hotelling-Lawley trace statistics instead of the **H** and **E** matrices.
+#' @param ss The sample size of the dataset.  If `NULL`, refer to \code{\link[mmemmuris]{completeData}}
+#' for calculation of the sample size.  Otherwise, use with care.
+#' @param tolerance Threshold for detecting columns that are linearly dependent.
+#' Use with care.
 #'
 #' @returns
 #' This function will return two lists: a within-subject effects list
@@ -2319,19 +2357,19 @@ makeHLTrace.ulm <- function(U, approximation = c("McKeon", "Pillai-Samson", "Wal
 #' @seealso
 #' {\code{\link[mmemmuris]{Hmatrix}}, \code{\link[mmemmuris]{coefs}}, \code{\link[mmemmuris]{Vmatrix}}, \code{\link[mmemmuris]{Ematrix}}, \code{\link[mmemmuris]{waldF}}, \code{\link[mmemmuris]{MLtoREML}}}
 
-royGR <- function(fMod, individual = NULL, within = "Time", waldF = TRUE, ss = NULL){
+royGR <- function(fMod, individual = NULL, within = "Time", waldF = TRUE, ss = NULL, tolerance = .Machine$double.eps){
   if(any(class(fMod) %in% c("gls", "lme"))){
-    rgr <- mmemmuris:::royGR.ulm(fMod, individual, waldF = waldF, ss = ss)
+    rgr <- mmemmuris:::royGR.ulm(fMod, individual, waldF = waldF, ss = ss, tolerance = tolerance)
     return(rgr)
   }else if(any(class(fMod) %in% "mlm")){
-    rgr <- mmemmuris:::royGR.mlm(fMod, within)
+    rgr <- mmemmuris:::royGR.mlm(fMod, within, tolerance)
     return(rgr)
   }else
     stop('Please provide a model of class "gls", "lme", or "mlm".', call. = FALSE)
 }
 
-royGR.mlm <- function(fMod, within = "Time"){
-  theta <- mmemmuris:::theta.mlm(fMod, within)
+royGR.mlm <- function(fMod, within = "Time", tolerance = .Machine$double.eps){
+  theta <- mmemmuris:::theta.mlm(fMod, within, tolerance)
 
   rWithin <- apply(cbind(theta$pWithin, theta$qWithin), 1, max)
   parmsRGRWithin <- data.frame(p = theta$pWithin, q = theta$qWithin, s = theta$sWithin,
@@ -2385,9 +2423,9 @@ royGR.mlm <- function(fMod, within = "Time"){
   return(rgr)
 }
 
-royGR.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
+royGR.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL, tolerance = .Machine$double.eps){
   tt <- mmemmuris::termsType(fMod)
-  theta <- mmemmuris:::theta.ulm(fMod, individual, waldF = waldF, ss = ss)
+  theta <- mmemmuris:::theta.ulm(fMod, individual, waldF = waldF, ss = ss, tolerance = tolerance)
 
   rWithin <- apply(cbind(theta$pWithin, theta$qWithin), 1, max)
   parmsRGRWithin <- data.frame(p = theta$pWithin, q = theta$qWithin, s = theta$sWithin,
@@ -2462,11 +2500,15 @@ royGR.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
   return(rgr)
 }
 
-theta.mlm <- function(fMod, within = "Time"){
+theta.mlm <- function(fMod, within = "Time", tolerance = .Machine$double.eps){
   type <- "1"
   E <- mmemmuris:::Ematrix.mlm(fMod)
   n <- E$n
   H <- mmemmuris:::Hmatrix.mlm(fMod, within)
+  if(is.null(mmemmuris:::inverseMatrix(E$EB, tolerance = tolerance)))
+    stop("EB ^ {-1} is singular.", call. = FALSE)
+  if(is.null(mmemmuris:::inverseMatrix(E$E, tolerance = tolerance)))
+    stop("E ^ {-1} is singular.", call. = FALSE)
 
   # Calculate Roy's greatest root statistic
   thetaBetween <- sapply(H$HB, function(x){
@@ -2512,7 +2554,8 @@ theta.mlm <- function(fMod, within = "Time"){
   return(theta)
 }
 
-theta.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
+theta.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL,
+                      tolerance = .Machine$double.eps){
   type <- "1"
   if(mmemmuris::covStruct(fMod) %in% c("cs", "other"))
     stop("Only unstructured covariance models are allowed.", call. = FALSE)
@@ -2521,13 +2564,13 @@ theta.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL){
   E <- mmemmuris:::Ematrix.ulm(fMod, individual, ss)
   H <- mmemmuris:::Hmatrix.ulm(fMod)
   n <- E$n
-  if("error" %in% class(tryCatch(any(sapply(H$HB, function(x){ Matrix::rankMatrix(x + E$EB) })), error = function(e) { e })))
+  if("error" %in% class(tryCatch(sapply(H$HB, function(x){ x + E$EB }), error = function(e) { e })))
     stop('Please pick a different E matrix with the "individual" argument.', call. = FALSE)
-  if("error" %in% class(tryCatch(any(sapply(H$H, function(x){ Matrix::rankMatrix(x + E$E) })), error = function(e) { e })))
+  if("error" %in% class(tryCatch(sapply(H$H, function(x){ x + E$E }), error = function(e) { e })))
     stop('Please pick a different E matrix with the "individual" argument.', call. = FALSE)
-  if(is.null(mmemmuris:::inverseMatrix(E$EB)))
+  if(is.null(mmemmuris:::inverseMatrix(E$EB, tolerance = tolerance)))
     EBsingular <- TRUE
-  if(is.null(mmemmuris:::inverseMatrix(E$E)))
+  if(is.null(mmemmuris:::inverseMatrix(E$E, tolerance = tolerance)))
     Esingular <- TRUE
   if(EBsingular == TRUE | Esingular == TRUE){
     waldF <- TRUE
@@ -2745,7 +2788,7 @@ makeRoyGR.ulm <- function(theta){
 #' observations of data in the long format.
 #'
 #' The likelihood ratio (LR) statistic approximately follows a \eqn{\chi ^ 2}
-#' distribution \deqn{LR = -2logLik(M_R) - {-2logLik(M_F)}} with
+#' distribution \deqn{LR = -2logLik(M_R) - \{-2logLik(M_F)\}} with
 #' \eqn{df_{M_R} - df_{M_F}} degrees of freedom.
 #'
 #' The Akaike's Information Criterion (AIC) is defined as
@@ -2787,7 +2830,7 @@ makeRoyGR.ulm <- function(theta){
 #' observations of data in the long format.
 #'
 #' The likelihood ratio (LR) statistic approximately follows a \eqn{\chi ^ 2}
-#' distribution \deqn{LR = -2logLik(M_R) - {-2logLik(M_F)}} with
+#' distribution \deqn{LR = -2logLik(M_R) - \{-2logLik(M_F)\}} with
 #' \eqn{df_{M_R} - df_{M_F}} degrees of freedom.
 #'
 #' The Akaike's Information Criterion (AIC) is defined as
@@ -2988,7 +3031,7 @@ ddfResidual <- function(fMod){
 #'
 #' The denominator degrees of freedom are equal to
 #'
-#' \eqn{ddfBetween = n - rank(}**X_b** \eqn{)}
+#' \eqn{ddf_{Between} = n - rank(}**X_b** \eqn{)}
 #'
 #' where \eqn{n} is the total number of observations of data in the wide format
 #' and **X_b** is the design matrix of the between-subject independent
@@ -2996,7 +3039,7 @@ ddfResidual <- function(fMod){
 #'
 #' for between-subject effects and
 #'
-#' \eqn{ddfWithin = ddf - ddfBetween}
+#' \eqn{ddf_{Within} = ddf - ddf_{Between}}
 #'
 #' for within-subject effects.
 #'
@@ -4147,7 +4190,7 @@ coefs <- function(fMod){
 #'
 #' Mauchly's test for sphericity is calculated as
 #'
-#' \eqn{W = (\Pi\lambda_i of} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) / (((\Sigma\lambda_i of} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) / (r - 1)) ^ (r - 1))}
+#' \eqn{W = (\Pi\lambda_i \text{ of }} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) / (((\Sigma\lambda_i \text{ of }} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) / (r - 1)) ^ {(r - 1)})}
 #'
 #' Let \eqn{r} be equal to the number of repeated measurements, \eqn{v}
 #' be the residual degrees of freedom (between-subject design matrix), and the correction factor equal
@@ -4198,9 +4241,9 @@ coefs <- function(fMod){
 #' @seealso
 #' {\code{\link[mmemmuris]{coefs}}, \code{\link[mmemmuris]{Vmatrix}}, \code{\link[mmemmuris]{Ematrix}}, \code{\link[mmemmuris]{epsilon}}}
 
-sphericityTests <- function(Ematrices){
+sphericityTests <- function(Ematrices, tolerance = .Machine$double.eps){
   if(any(class(Ematrices) %in% c("Ematrix.mlm", "Ematrix.ulm"))){
-    if(is.null(mmemmuris:::inverseMatrix(Ematrices$E))){
+    if(is.null(mmemmuris:::inverseMatrix(Ematrices$E, tolerance = tolerance))){
       warning("The SSCP E matrix is singular.  Sphericity tests are not available.", call. = FALSE)
       sphericityTests <- list(r = Ematrices$r)
       class(sphericityTests) <- c("list", "sphericityTests")
@@ -5376,7 +5419,7 @@ isReversible <- function(fMod){
   return(mmemmuris::completeData(fMod)$complete & mmemmuris::BWInteracted(fMod))
 }
 
-determinantMatrix <- function(mat, tolerance = 1e-4){
+determinantMatrix <- function(mat, tolerance = .Machine$double.eps){
   detMat <- det(mat)
   if(abs(detMat) < tolerance)
     return(0L)
@@ -5384,7 +5427,7 @@ determinantMatrix <- function(mat, tolerance = 1e-4){
     return(detMat)
 }
 
-inverseMatrix <- function(mat, tolerance = 1e-4){
+inverseMatrix <- function(mat, tolerance = .Machine$double.eps){
   invMat <- tryCatch(solve(mat, tol = tolerance), error = function(e) { e })
   if("error" %in% class(invMat))
     return(NULL)
@@ -5442,7 +5485,7 @@ inverseMatrix <- function(mat, tolerance = 1e-4){
 #'
 #' The Greenhouse-Geisser epsilon is calculated as
 #'
-#' \eqn{\epsilon_{GG} = ((\Sigma\lambda_i of} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) ^ 2) / (r - 1)(\Sigma\lambda_i ^ 2 of} **E**\eqn{(}**M'M**\eqn{) ^ {-1})}
+#' \eqn{\epsilon_{GG} = ((\Sigma\lambda_i \text{ of }} **E**\eqn{(}**M'M**\eqn{) ^ {-1}) ^ 2) / (r - 1)(\Sigma\lambda_i ^ 2 \text{ of }} **E**\eqn{(}**M'M**\eqn{) ^ {-1})}
 #'
 #' The Huynh-Feldt-Lecoutre epsilon is calculated as
 #'
@@ -5480,14 +5523,15 @@ inverseMatrix <- function(mat, tolerance = 1e-4){
 #' {\code{\link[mmemmuris]{coefs}}, \code{\link[mmemmuris]{Vmatrix}}, \code{\link[mmemmuris]{Ematrix}}, \code{\link[mmemmuris]{sphericityTests}}}
 
 epsilon <- function(Ematrices,
-                    method = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre")){
+                    method = c("Greenhouse-Geisser", "Huynh-Feldt-Lecoutre"),
+                    tolerance = .Machine$double.eps){
   method <- match.arg(method)
   if(any(class(Ematrices) %in% c("Ematrix.mlm", "Ematrix.ulm"))){
     if((Ematrices$r - 1) == 1L){
       warning("The lower-bound epsilon is 1.", call. = FALSE)
       return(1L)
     }
-    if(is.null(mmemmuris:::inverseMatrix(Ematrices$E)))
+    if(is.null(mmemmuris:::inverseMatrix(Ematrices$E, tolerance = tolerance)))
       stop("The SSCP E matrix is singular.  Epsilon corrections are not available.", call. = FALSE)
     ggEpsilon <- (sum(diag(eigen(Ematrices$E %*% solve(t(Ematrices$M) %*% Ematrices$M))$values)) ^ 2) / ((Ematrices$r - 1) * sum(eigen(Ematrices$E %*% solve(t(Ematrices$M) %*% Ematrices$M))$values ^ 2))
     if(method == "Greenhouse-Geisser"){
@@ -5555,7 +5599,7 @@ epsilon <- function(Ematrices,
 #' observations of data in the long format.
 #'
 #' The likelihood ratio (LR) statistic approximately follows a \eqn{\chi ^ 2}
-#' distribution \deqn{LR = -2logLik(M_R) - {-2logLik(M_F)}} with
+#' distribution \deqn{LR = -2logLik(M_R) - \{-2logLik(M_F)\}} with
 #' \eqn{df_{M_R} - df_{M_F}} degrees of freedom.
 #'
 #' @examples

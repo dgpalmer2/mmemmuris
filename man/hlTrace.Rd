@@ -10,7 +10,8 @@ hlTrace(
   approximation = c("McKeon", "Pillai-Samson", "Wald"),
   within = "Time",
   waldF = TRUE,
-  ss = NULL
+  ss = NULL,
+  tolerance = .Machine$double.eps
 )
 }
 \arguments{
@@ -31,6 +32,12 @@ The default is "Time".}
 
 \item{waldF}{Wald F-tests are used to calculate the Wald \eqn{\chi ^ 2} and
 Hotelling-Lawley trace statistics instead of the \strong{H} and \strong{E} matrices.}
+
+\item{ss}{The sample size of the dataset.  If \code{NULL}, refer to \code{\link[mmemmuris]{completeData}}
+for calculation of the sample size.  Otherwise, use with care.}
+
+\item{tolerance}{Threshold for detecting columns that are linearly dependent.
+Use with care.}
 }
 \value{
 This function will return two lists: a within-subject effects list

@@ -4,7 +4,7 @@
 \alias{sphericityTests}
 \title{Mauchly's Sphericity Tests for Within-Subject Effects}
 \usage{
-sphericityTests(Ematrices)
+sphericityTests(Ematrices, tolerance = .Machine$double.eps)
 }
 \arguments{
 \item{Ematrices}{An object of class \code{Ematrix.ulm} or \code{Ematrix.mlm}.}
@@ -58,7 +58,7 @@ sphericity for within-subject effects.
 
 Mauchly's test for sphericity is calculated as
 
-\eqn{W = (\Pi\lambda_i of} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) / (((\Sigma\lambda_i of} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) / (r - 1)) ^ (r - 1))}
+\eqn{W = (\Pi\lambda_i \text{ of }} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) / (((\Sigma\lambda_i \text{ of }} \strong{E}\eqn{(}\strong{M'M}\eqn{) ^ {-1}) / (r - 1)) ^ {(r - 1)})}
 
 Let \eqn{r} be equal to the number of repeated measurements, \eqn{v}
 be the residual degrees of freedom (between-subject design matrix), and the correction factor equal
