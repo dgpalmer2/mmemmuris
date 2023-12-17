@@ -1,6 +1,6 @@
 Package: mmemmuris
 Title: Marginal and Mixed-Effects Models for Multivariate and Univariate Results Including Sphericity
-Version: 0.0.2
+Version: 0.1.0
 Authors@R: 
     person("Daniel", "Palmer", email = "daniel.g.palmer@und.edu", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-9260-8782"))
