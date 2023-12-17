@@ -2147,11 +2147,65 @@ hlTrace.mlm <- function(fMod, approximation = c("McKeon", "Pillai-Samson", "Wald
   }
 }
 
+makeHLTrace.mlm <- function(U, approximation = c("McKeon", "Pillai-Samson", "Wald")){
+  approximation <- match.arg(approximation)
+
+  if(approximation == "McKeon"){
+    mckeonFApprox <- mmemmuris:::mckeonF(U)
+
+    withinTests <- mckeonFApprox$hltWithin
+
+    if(!is.null(mckeonFApprox$hltBetween)){
+      betweenTests <- mckeonFApprox$hltBetween
+
+      hlt <- list(betweenTests = betweenTests,
+                  withinTests = withinTests)
+      class(hlt) <- c("list", "multiTest", "hlt", "mlm")
+    }else{
+      hlt <- list(withinTests = withinTests)
+      class(hlt) <- c("list", "multiTest", "hlt", "mlm")
+    }
+    return(hlt)
+  }else if(approximation == "Pillai-Samson"){
+    psFApprox <- mmemmuris:::psF(U)
+
+    withinTests <- psFApprox$hltWithin
+
+    if(!is.null(psFApprox$hltBetween)){
+      betweenTests <- psFApprox$hltBetween
+
+      hlt <- list(betweenTests = betweenTests,
+                  withinTests = withinTests)
+      class(hlt) <- c("list", "multiTest", "hlt", "mlm")
+    }else{
+      hlt <- list(withinTests = withinTests)
+      class(hlt) <- c("list", "multiTest", "hlt", "mlm")
+    }
+    return(hlt)
+  }else if(approximation == "Wald"){
+    waldChiApprox <- mmemmuris:::waldChi(U)
+
+    withinTests <- waldChiApprox$hltWithin
+
+    if(!is.null(waldChiApprox$hltBetween)){
+      betweenTests <- waldChiApprox$hltBetween
+
+      hlt <- list(betweenTests = betweenTests,
+                  withinTests = withinTests)
+      class(hlt) <- c("list", "multiTest", "hlt", "mlm")
+    }else{
+      hlt <- list(withinTests = withinTests)
+      class(hlt) <- c("list", "multiTest", "hlt", "mlm")
+    }
+    return(hlt)
+  }
+}
+
 makeHLTrace.ulm <- function(U, approximation = c("McKeon", "Pillai-Samson", "Wald")){
   approximation <- match.arg(approximation)
 
   if(approximation == "McKeon"){
-    mckeonFApprox <- mckeonF(U)
+    mckeonFApprox <- mmemmuris:::mckeonF(U)
 
     withinTests <- mckeonFApprox$hltWithin
 
@@ -2169,7 +2223,7 @@ makeHLTrace.ulm <- function(U, approximation = c("McKeon", "Pillai-Samson", "Wal
     }
     return(hlt)
   }else if(approximation == "Pillai-Samson"){
-    psFApprox <- psF(U)
+    psFApprox <- mmemmuris:::psF(U)
 
     withinTests <- psFApprox$hltWithin
 
@@ -2187,7 +2241,7 @@ makeHLTrace.ulm <- function(U, approximation = c("McKeon", "Pillai-Samson", "Wal
     }
     return(hlt)
   }else if(approximation == "Wald"){
-    waldChiApprox <- waldChi(U)
+    waldChiApprox <- mmemmuris:::waldChi(U)
 
     withinTests <- waldChiApprox$hltWithin
 
@@ -2680,6 +2734,61 @@ theta.ulm <- function(fMod, individual = NULL, waldF = TRUE, ss = NULL,
 
   class(theta) <- c("list", "theta.ulm")
   return(theta)
+}
+
+makeRoyGR.mlm <- function(theta){
+
+  rWithin <- apply(cbind(theta$pWithin, theta$qWithin), 1, max)
+  parmsRGRWithin <- data.frame(p = theta$pWithin, q = theta$qWithin, s = theta$sWithin,
+                               r = rWithin, v = theta$v)
+  FrgrWithin <- theta$thetaWithin * ((theta$v - rWithin + theta$qWithin) / rWithin)
+  termsRGRWithin <- data.frame(dfNum = rWithin,
+                               dfDen = theta$v - rWithin + theta$qWithin,
+                               theta = theta$thetaWithin, F = FrgrWithin,
+                               p.value = 1 - pf(FrgrWithin, rWithin, theta$v - rWithin + theta$qWithin))
+
+  colnames(termsRGRWithin) <- c("Num df", "Den df", "theta", "F", "Pr(>F)")
+  termsRGRWithin <- cbind(termsRGRWithin, mmemmuris::sigStars(termsRGRWithin$`Pr(>F)`))
+  colnames(termsRGRWithin)[length(colnames(termsRGRWithin))] <- ""
+
+  withinTests <- list(rgr = termsRGRWithin,
+                      parmsRGR = parmsRGRWithin,
+                      approximation = "Pillai",
+                      E = theta$E, H = theta$H,
+                      Lwithin = theta$Lwithin, type = theta$type)
+
+  if(!is.null(theta$thetaBetween)){
+    rBetween <- apply(cbind(theta$pBetween, theta$qBetween), 1, max)
+    parmsRGRBetween <- data.frame(p = theta$pBetween, q = theta$qBetween,
+                                  s = theta$sBetween, r = rBetween,
+                                  v = theta$v)
+    FrgrBetween <- theta$thetaBetween * ((theta$v - rBetween + theta$qBetween) / rBetween)
+    termsRGRBetween <- data.frame(dfNum = rBetween,
+                                  dfDen = theta$v - rBetween + theta$qBetween,
+                                  theta = theta$thetaBetween, F = FrgrBetween,
+                                  p.value = 1 - pf(FrgrBetween, rBetween, theta$v - rBetween + theta$qBetween))
+
+    colnames(termsRGRBetween) <- c("Num df", "Den df", "theta", "F", "Pr(>F)")
+    termsRGRBetween <- cbind(termsRGRBetween, mmemmuris::sigStars(termsRGRBetween$`Pr(>F)`))
+    colnames(termsRGRBetween)[length(colnames(termsRGRBetween))] <- ""
+
+    betweenTests <- list(rgr = termsRGRBetween[rownames(termsRGRBetween) != "(Intercept)", ],
+                         parmsRGR = parmsRGRBetween[rownames(parmsRGRBetween) != "(Intercept)", ],
+                         approximation = "Pillai",
+                         EB = theta$EB, HB = theta$HB,
+                         Lbetween = theta$Lbetween, L = theta$L, type = theta$type,
+                         Vmatrix = theta$EB / theta$n)
+
+    if(nrow(betweenTests$rgr) > 0L)
+      rgr <- list(betweenTests = betweenTests, withinTests = withinTests)
+    else
+      rgr <- list(withinTests = withinTests)
+    class(rgr) <- c("list", "multiTest", "rgr", "mlm")
+  }else{
+    rgr <- list(withinTests = withinTests)
+    class(rgr) <- c("list", "multiTest", "rgr", "mlm")
+  }
+  return(rgr)
 }
 
 makeRoyGR.ulm <- function(theta){
@@ -3253,7 +3362,7 @@ print.wilks <- function(wilks, digits = 4){
         cat(paste0("Approximation method: ", wilks$betweenTests$approximation, "\n\n"))
         if(wilks$betweenTests$approximation == "Rao"){
           for(i in 1:nrow(wilks$betweenTests$parmsWilks)){
-            if(wilks$betweenTests$parmsWilks$s[i] <= 2L)
+            if(wilks$betweenTests$parmsWilks$s[i] %in% c(1L, 2L))
               cat("The F-statistic for", rownames(wilks$betweenTests$parmsWilks)[i], "is exact.\n")
           }
         }
@@ -3276,7 +3385,7 @@ print.wilks <- function(wilks, digits = 4){
     cat(paste0("Approximation method: ", wilks$withinTests$approximation, "\n\n"))
     if(wilks$withinTests$approximation == "Rao"){
       for(i in 1:nrow(wilks$withinTests$parmsWilks)){
-        if(wilks$withinTests$parmsWilks$s[i] <= 2)
+        if(wilks$withinTests$parmsWilks$s[i] %in% c(1L, 2L))
           cat("The F-statistic for", rownames(wilks$withinTests$parmsWilks)[i], "is exact.\n")
       }
     }
@@ -3362,7 +3471,7 @@ print.hlt <- function(hlt, digits = 4){
       cat(paste0("Approximation method: ", hlt$betweenTests$approximation, "\n\n"))
       if(hlt$betweenTests$approximation %in% c("McKeon", "Pillai-Samson")){
         for(i in 1:nrow(hlt$betweenTests$parmsHL)){
-          if(hlt$betweenTests$parmsHL$s[i] == 1)
+          if(hlt$betweenTests$parmsHL$s[i] == 1L)
             cat("The F-statistic for", rownames(hlt$betweenTests$parmsHL)[i], "is exact.\n")
         }
       }
@@ -3385,7 +3494,7 @@ print.hlt <- function(hlt, digits = 4){
   cat(paste0("Approximation method: ", hlt$withinTests$approximation, "\n\n"))
   if(hlt$withinTests$approximation %in% c("McKeon", "Pillai-Samson")){
     for(i in 1:nrow(hlt$withinTests$parmsHL)){
-      if(hlt$withinTests$parmsHL$s[i] == 1)
+      if(hlt$withinTests$parmsHL$s[i] == 1L)
         cat("The F-statistic for", rownames(hlt$withinTests$parmsHL)[i], "is exact.\n")
     }
   }
@@ -3416,9 +3525,12 @@ print.rgr <- function(rgr, digits = 4){
     cat(paste0("Approximation method: ", rgr$betweenTests$approximation, "\n\n"))
     if(nrow(rgr$betweenTests$parmsRGR) > 0L){
       for(i in 1:nrow(rgr$betweenTests$parmsRGR)){
-        if(rgr$betweenTests$parmsRGR$s[i] <= 1)
+        if(rgr$betweenTests$parmsRGR$s[i] == 1L)
           cat("The F-statistic for", rownames(rgr$betweenTests$parmsRGR)[i], "is exact.\n")
-        else if(rgr$waldF == FALSE)
+        else if("ulm" %in% class(rgr)){
+          if(rgr$waldF == FALSE)
+            cat("The F-statistic for", rownames(rgr$betweenTests$parmsRGR)[i], "is an upper bound.\n")
+        }else if("mlm" %in% class(rgr))
           cat("The F-statistic for", rownames(rgr$betweenTests$parmsRGR)[i], "is an upper bound.\n")
       }
     }
@@ -3440,9 +3552,12 @@ print.rgr <- function(rgr, digits = 4){
   cat(paste0("Approximation method: ", rgr$withinTests$approximation, "\n\n"))
   if(nrow(rgr$withinTests$parmsRGR) > 0L){
     for(i in 1:nrow(rgr$withinTests$parmsRGR)){
-      if(rgr$withinTests$parmsRGR$s[i] <= 1)
+      if(rgr$withinTests$parmsRGR$s[i] == 1L)
         cat("The F-statistic for", rownames(rgr$withinTests$parmsRGR)[i], "is exact.\n")
-      else if(rgr$waldF == FALSE)
+      else if("ulm" %in% class(rgr)){
+        if(rgr$waldF == FALSE)
+          cat("The F-statistic for", rownames(rgr$withinTests$parmsRGR)[i], "is an upper bound.\n")
+      }else if("mlm" %in% class(rgr))
         cat("The F-statistic for", rownames(rgr$withinTests$parmsRGR)[i], "is an upper bound.\n")
     }
   }
@@ -4713,11 +4828,62 @@ BChi <- function(lambda){
     stop('Please provide an object of class "lambda.ulm" or "lambda.mlm".', call. = FALSE)
 }
 
+makeWilksLambda.mlm <- function(lambda, approximation = c("Rao", "Bartlett", "LR")){
+  approximation <- match.arg(approximation)
+
+  if(approximation == "Rao"){
+    raoFApprox <- mmemmuris:::raoF(lambda)
+
+    withinTests <- raoFApprox$wilksWithin
+
+    if(!is.null(raoFApprox$wilksBetween)){
+      betweenTests <- raoFApprox$wilksBetween
+      wilks <- list(betweenTests = betweenTests,
+                    withinTests = withinTests)
+      class(wilks) <- c("list", "multiTest", "wilks", "mlm")
+    }else{
+      wilks <- list(withinTests = withinTests)
+      class(wilks) <- c("list", "multiTest", "wilks", "mlm")
+    }
+    return(wilks)
+  }else if(approximation == "LR"){
+    lrChiApprox <- mmemmuris:::lrChi(lambda)
+
+    withinTests <- lrChiApprox$wilksWithin
+
+    if(!is.null(lrChiApprox$wilksBetween)){
+      betweenTests <- lrChiApprox$wilksBetween
+      wilks <- list(betweenTests = betweenTests,
+                    withinTests = withinTests)
+      class(wilks) <- c("list", "multiTest", "wilks", "mlm")
+    }else{
+      wilks <- list(withinTests = withinTests)
+      class(wilks) <- c("list", "multiTest", "wilks", "mlm")
+    }
+    return(wilks)
+  }else if(approximation == "Bartlett"){
+    BChiApprox <- mmemmuris:::BChi(lambda)
+
+    withinTests <- BChiApprox$wilksWithin
+
+    if(!is.null(BChiApprox$wilksBetween)){
+      betweenTests <- BChiApprox$wilksBetween
+      wilks <- list(betweenTests = betweenTests,
+                    withinTests = withinTests)
+      class(wilks) <- c("list", "multiTest", "wilks", "mlm")
+    }else{
+      wilks <- list(withinTests = withinTests)
+      class(wilks) <- c("list", "multiTest", "wilks", "mlm")
+    }
+    return(wilks)
+  }
+}
+
 makeWilksLambda.ulm <- function(lambda, approximation = c("Rao", "Bartlett", "LR")){
   approximation <- match.arg(approximation)
 
   if(approximation == "Rao"){
-    raoFApprox <- raoF(lambda)
+    raoFApprox <- mmemmuris:::raoF(lambda)
 
     withinTests <- raoFApprox$wilksWithin
 
@@ -4734,7 +4900,7 @@ makeWilksLambda.ulm <- function(lambda, approximation = c("Rao", "Bartlett", "LR
     }
     return(wilks)
   }else if(approximation == "LR"){
-    lrChiApprox <- lrChi(lambda)
+    lrChiApprox <- mmemmuris:::lrChi(lambda)
 
     withinTests <- lrChiApprox$wilksWithin
 
@@ -4751,7 +4917,7 @@ makeWilksLambda.ulm <- function(lambda, approximation = c("Rao", "Bartlett", "LR
     }
     return(wilks)
   }else if(approximation == "Bartlett"){
-    BChiApprox <- BChi(lambda)
+    BChiApprox <- mmemmuris:::BChi(lambda)
 
     withinTests <- BChiApprox$wilksWithin
 
@@ -4986,40 +5152,82 @@ pillaiF <- function(V){
     stop('Please provide an object of class "V.ulm" or "V.mlm".', call. = FALSE)
 }
 
+makePillaiTrace.mlm <- function(V, approximation = c("Muller", "Pillai")){
+  approximation <- match.arg(approximation)
+
+  if(approximation == "Muller"){
+    mullerFApprox <- mmemmuris:::mullerF(V)
+    withinTests <- mullerFApprox$pillaiWithin
+    if(!is.null(mullerFApprox$pillaiBetween$pillai)){
+      if(nrow(mullerFApprox$pillaiBetween$pillai) > 0L){
+        betweenTests <- mullerFApprox$pillaiBetween
+        pillai <- list(betweenTests = betweenTests, withinTests = withinTests)
+        class(pillai) <- c("list", "multiTest", "pillai", "mlm")
+      }else{
+        pillai <- list(withinTests = withinTests)
+        class(pillai) <- c("list", "multiTest", "pillai", "mlm")
+      }
+    }else{
+      pillai <- list(withinTests = withinTests)
+      class(pillai) <- c("list", "multiTest", "pillai", "mlm")
+    }
+    return(pillai)
+  }else if(approximation == "Pillai"){
+    pillaiFApprox <- mmemmuris:::pillaiF(V)
+    withinTests <- pillaiFApprox$pillaiWithin
+    if(!is.null(pillaiFApprox$pillaiBetween$pillai)){
+      if(nrow(pillaiFApprox$pillaiBetween$pillai) > 0L){
+        betweenTests <- pillaiFApprox$pillaiBetween
+        pillai <- list(betweenTests = betweenTests, withinTests = withinTests)
+        class(pillai) <- c("list", "multiTest", "pillai", "mlm")
+      }else{
+        pillai <- list(withinTests = withinTests)
+        class(pillai) <- c("list", "multiTest", "pillai", "mlm")
+      }
+    }else{
+      pillai <- list(withinTests = withinTests)
+      class(pillai) <- c("list", "multiTest", "pillai", "mlm")
+    }
+    return(pillai)
+  }
+}
+
 makePillaiTrace.ulm <- function(V, approximation = c("Muller", "Pillai")){
   approximation <- match.arg(approximation)
 
   if(approximation == "Muller"){
-    mullerFApprox <- mullerF(V)
-
+    mullerFApprox <- mmemmuris:::mullerF(V)
     withinTests <- mullerFApprox$pillaiWithin
-
-    if(!is.null(mullerFApprox$pillaiBetween)){
-      betweenTests <- mullerFApprox$pillaiBetween
-      pillai <- list(betweenTests = betweenTests,
-                     withinTests = withinTests,
-                     LR = V$LR)
-      class(pillai) <- c("list", "multiTest", "pillai", "ulm")
+    if(!is.null(mullerFApprox$pillaiBetween$pillai)){
+      if(nrow(mullerFApprox$pillaiBetween$pillai) > 0L){
+        betweenTests <- mullerFApprox$pillaiBetween
+        pillai <- list(betweenTests = betweenTests, withinTests = withinTests,
+                       LR = V$LR)
+        class(pillai) <- c("list", "multiTest", "pillai", "ulm")
+      }else{
+        pillai <- list(withinTests = withinTests, LR = V$LR)
+        class(pillai) <- c("list", "multiTest", "pillai", "ulm")
+      }
     }else{
-      pillai <- list(withinTests = withinTests,
-                     LR = V$LR)
+      pillai <- list(withinTests = withinTests, LR = V$LR)
       class(pillai) <- c("list", "multiTest", "pillai", "ulm")
     }
     return(pillai)
   }else if(approximation == "Pillai"){
-    pillaiFApprox <- pillaiF(V)
-
+    pillaiFApprox <- mmemmuris:::pillaiF(V)
     withinTests <- pillaiFApprox$pillaiWithin
-
-    if(!is.null(pillaiFApprox$pillaiBetween)){
-      betweenTests <- pillaiFApprox$pillaiBetween
-      pillai <- list(betweenTests = betweenTests,
-                     withinTests = withinTests,
-                     LR = V$LR)
-      class(pillai) <- c("list", "multiTest", "pillai", "ulm")
+    if(!is.null(pillaiFApprox$pillaiBetween$pillai)){
+      if(nrow(pillaiFApprox$pillaiBetween$pillai) > 0L){
+        betweenTests <- pillaiFApprox$pillaiBetween
+        pillai <- list(betweenTests = betweenTests, withinTests = withinTests,
+                       LR = V$LR)
+        class(pillai) <- c("list", "multiTest", "pillai", "ulm")
+      }else{
+        pillai <- list(withinTests = withinTests, LR = V$LR)
+        class(pillai) <- c("list", "multiTest", "pillai", "ulm")
+      }
     }else{
-      pillai <- list(withinTests = withinTests,
-                     LR = V$LR)
+      pillai <- list(withinTests = withinTests, LR = V$LR)
       class(pillai) <- c("list", "multiTest", "pillai", "ulm")
     }
     return(pillai)
